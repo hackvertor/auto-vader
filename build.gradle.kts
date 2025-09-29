@@ -8,6 +8,7 @@ repositories {
 
 dependencies {
     compileOnly("net.portswigger.burp.extensions:montoya-api:2025.3")
+    implementation("com.microsoft.playwright:playwright:1.55.0")
 }
 
 tasks.withType<JavaCompile> {
