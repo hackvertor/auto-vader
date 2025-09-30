@@ -52,21 +52,50 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
         JPanel containerPanel = new JPanel(new BorderLayout());
 
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        JPanel mainPanel = new JPanel(new GridLayout(1, 2, 20, 0));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
+        // Left column
+        JPanel leftColumn = new JPanel();
+        leftColumn.setLayout(new BoxLayout(leftColumn, BoxLayout.Y_AXIS));
+
+        // Step 1: Copy token from DOM Invader canary
         JLabel step1Label = new JLabel("Step 1");
         step1Label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainPanel.add(step1Label);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        leftColumn.add(step1Label);
+        leftColumn.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        JButton launchButton = new JButton("Launch Browser");
+        launchButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        launchButton.addActionListener(e -> {
+            AutoVaderExtension.executorService.submit(() -> {
+                String domInvaderPath = settings.getString("DOM Invader path");
+                List<String> urls = List.of("https://portswigger-labs.net");
+
+                playwrightRenderer.renderUrls(urls, domInvaderPath, false, false);
+                api.logging().logToOutput("Opened setup URL - browser will remain open");
+            });
+        });
+
+        JTextArea tokenArea = generateWrapTextArea("First click the Launch Browser button. Click the plug icon in the top right and click the pin. Enable DOM Invader. Click the copy button.");
+        tokenArea.setAlignmentX(Component.LEFT_ALIGNMENT);
+        leftColumn.add(tokenArea);
+        leftColumn.add(Box.createRigidArea(new Dimension(0, 5)));
+        leftColumn.add(launchButton);
+        leftColumn.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        // Step 2: Sink callback
+        JLabel step2Label = new JLabel("Step 2");
+        step2Label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        leftColumn.add(step2Label);
+        leftColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JLabel sinkLabel = new JLabel("Sink callback");
         sinkLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainPanel.add(sinkLabel);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        leftColumn.add(sinkLabel);
+        leftColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
-        JTextArea sinkTextArea = new JTextArea(8, 80);
+        JTextArea sinkTextArea = new JTextArea(8, 40);
         sinkTextArea.setText("""
                 function(sinkDetails, sinks, interestingSinks) {
                     const payload = {
@@ -90,26 +119,30 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         JScrollPane sinkScrollPane = new JScrollPane(sinkTextArea);
         sinkScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
         sinkScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-        mainPanel.add(sinkScrollPane);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        leftColumn.add(sinkScrollPane);
+        leftColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JButton copySinkButton = new JButton("Copy to Clipboard");
         copySinkButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         copySinkButton.addActionListener(e -> copyToClipboard(sinkTextArea.getText()));
-        mainPanel.add(copySinkButton);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        leftColumn.add(copySinkButton);
+        leftColumn.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        JLabel step2Label = new JLabel("Step 2");
-        step2Label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainPanel.add(step2Label);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        JPanel rightColumn = new JPanel();
+        rightColumn.setLayout(new BoxLayout(rightColumn, BoxLayout.Y_AXIS));
+
+        // Step 3: Source callback
+        JLabel step3Label = new JLabel("Step 3");
+        step3Label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rightColumn.add(step3Label);
+        rightColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JLabel sourceLabel = new JLabel("Source callback");
         sourceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainPanel.add(sourceLabel);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        rightColumn.add(sourceLabel);
+        rightColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
-        JTextArea sourceTextArea = new JTextArea(8, 80);
+        JTextArea sourceTextArea = new JTextArea(8, 40);
         sourceTextArea.setText("""
                 function(sourceDetails, sources) {
                     const payload = {
@@ -132,27 +165,26 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         JScrollPane sourceScrollPane = new JScrollPane(sourceTextArea);
         sourceScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
         sourceScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-        mainPanel.add(sourceScrollPane);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        rightColumn.add(sourceScrollPane);
+        rightColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JButton copySourceButton = new JButton("Copy to Clipboard");
         copySourceButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         copySourceButton.addActionListener(e -> copyToClipboard(sourceTextArea.getText()));
-        mainPanel.add(copySourceButton);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        rightColumn.add(copySourceButton);
 
-        // Step 3: Message callback
-        JLabel step3Label = new JLabel("Step 3");
-        step3Label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainPanel.add(step3Label);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        // Step 4: Message callback
+        JLabel step4Label = new JLabel("Step 4");
+        step4Label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rightColumn.add(step4Label);
+        rightColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JLabel messageLabel = new JLabel("Message callback");
         messageLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        mainPanel.add(messageLabel);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        rightColumn.add(messageLabel);
+        rightColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
-        JTextArea messageTextArea = new JTextArea(8, 80);
+        JTextArea messageTextArea = new JTextArea(8, 40);
         messageTextArea.setText("""
                 function(msg) {
                     const payload = {
@@ -197,28 +229,18 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         JScrollPane messageScrollPane = new JScrollPane(messageTextArea);
         messageScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
         messageScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-        mainPanel.add(messageScrollPane);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        rightColumn.add(messageScrollPane);
+        rightColumn.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JButton copyMessageButton = new JButton("Copy to Clipboard");
         copyMessageButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         copyMessageButton.addActionListener(e -> copyToClipboard(messageTextArea.getText()));
-        mainPanel.add(copyMessageButton);
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        rightColumn.add(copyMessageButton);
+        rightColumn.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Launch browser button
-        JButton launchButton = new JButton("Launch Browser");
-        launchButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        launchButton.addActionListener(e -> {
-            AutoVaderExtension.executorService.submit(() -> {
-                String domInvaderPath = settings.getString("DOM Invader path");
-                List<String> urls = List.of("https://portswigger-labs.net");
-
-                playwrightRenderer.renderUrls(urls, domInvaderPath, false, false);
-                api.logging().logToOutput("Opened setup URL - browser will remain open");
-            });
-        });
-        mainPanel.add(launchButton);
+        // Add both columns to main panel
+        mainPanel.add(leftColumn);
+        mainPanel.add(rightColumn);
 
         containerPanel.add(mainPanel, BorderLayout.CENTER);
         window.add(containerPanel);
@@ -229,5 +251,15 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         StringSelection selection = new StringSelection(text);
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         clipboard.setContents(selection, selection);
+    }
+
+    private JTextArea generateWrapTextArea(String text) {
+        JTextArea area = new JTextArea(text);
+        area.setWrapStyleWord(true);
+        area.setLineWrap(true);
+        area.setEditable(false);
+        area.setOpaque(false);
+        area.setBorder(null);
+        return area;
     }
 }
