@@ -7,7 +7,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("net.portswigger.burp.extensions:montoya-api:2025.3")
+    compileOnly("net.portswigger.burp.extensions:montoya-api:2025.6")
     implementation("com.microsoft.playwright:playwright:1.55.0")
 }
 

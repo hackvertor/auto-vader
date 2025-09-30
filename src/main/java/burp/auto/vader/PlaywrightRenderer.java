@@ -1,21 +1,30 @@
 package burp.auto.vader;
 
 import com.microsoft.playwright.*;
-import com.microsoft.playwright.options.Proxy;
 import com.microsoft.playwright.options.WaitUntilState;
 
+import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
 
-import static burp.auto.vader.AutoVaderExtension.api;
-import static burp.auto.vader.AutoVaderExtension.chromiumPath;
+import static burp.auto.vader.AutoVaderExtension.*;
 
 public class PlaywrightRenderer {
 
-    public void renderUrls(List<String> urls, String extensionPath) {
-        try (Playwright playwright = Playwright.create()) {
-            BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions();
+    public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless) {
+        Playwright playwright = null;
+        BrowserContext context = null;
+        try {
+            String homeDir = System.getProperty("user.home");
+            File autoVaderDir = new File(homeDir, ".AutoVader");
+            if (!autoVaderDir.exists()) {
+                autoVaderDir.mkdirs();
+                api.logging().logToOutput("Created AutoVader directory at: " + autoVaderDir.getAbsolutePath());
+            }
 
+            playwright = Playwright.create();
+            BrowserType.LaunchPersistentContextOptions launchOptions = new BrowserType.LaunchPersistentContextOptions();
+            String chromiumPath = settings.getString("Burp Chromium path");
             if (!chromiumPath.isEmpty()) {
                 launchOptions.setExecutablePath(Paths.get(chromiumPath));
                 api.logging().logToOutput("Using Burp Chromium at: " + chromiumPath);
@@ -23,15 +32,18 @@ public class PlaywrightRenderer {
                 api.logging().logToOutput("Burp Chromium not found, using system browser");
             }
 
+            String userDataDir = new File(autoVaderDir, "browser-profile").getAbsolutePath();
+
             if (extensionPath != null && !extensionPath.isEmpty()) {
                 launchOptions.setArgs(java.util.Arrays.asList(
                         "--disable-extensions-except=" + extensionPath,
                         "--load-extension=" + extensionPath
-                )).setHeadless(false);
+                )).setHeadless(headless);
+            } else {
+                launchOptions.setHeadless(headless);
             }
 
-            Browser browser = playwright.chromium().launch(launchOptions);
-            BrowserContext context = browser.newContext();
+            context = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
             Page page = context.newPage();
 
             for (String url : urls) {
@@ -43,9 +55,18 @@ public class PlaywrightRenderer {
                 }
             }
 
-            browser.close();
+            if (closeBrowser) {
+                context.close();
+                playwright.close();
+            }
         } catch (Exception e) {
-            api.logging().logToError("Error in Playwright rendering: " + e.toString());
+            api.logging().logToError("Error in Playwright rendering: " + e.getMessage());
+            if (context != null) {
+                context.close();
+            }
+            if (playwright != null) {
+                playwright.close();
+            }
         }
     }
 
