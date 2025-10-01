@@ -109,9 +109,7 @@ public class PlaywrightRenderer {
                     extPage.navigate("chrome-extension://" + extId + "/settings/settings.html");
                     extPage.evaluate("""
                         () => {
-                            const settings = localStorage.getItem("DOMInvaderSettings");
-                            settings.canary = "foobar";
-                            localStorage.setItem('DOMInvaderSettings', settings);
+                            chrome.storage.local.set({canary: 'foobar'});
                         }
                     """);
                     api.logging().logToOutput("Configured extension settings");
