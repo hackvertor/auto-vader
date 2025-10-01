@@ -13,7 +13,7 @@ public class PlaywrightRenderer {
 
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless) {
         Playwright playwright = null;
-        BrowserContext context = null;
+        BrowserContext ctx = null;
         try {
             String homeDir = System.getProperty("user.home");
             File autoVaderDir = new File(homeDir, ".AutoVader");
@@ -43,8 +43,84 @@ public class PlaywrightRenderer {
                 launchOptions.setHeadless(headless);
             }
 
-            context = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
-            Page page = context.newPage();
+            ctx = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
+            String extId = null;
+
+            if (extensionPath != null && !extensionPath.isEmpty()) {
+                // Try to get extension ID by checking the Extension State directory
+                try {
+                    // Wait for browser to fully initialize and write extension files
+                    Thread.sleep(3000);
+
+                    // Check for Extensions directory which contains subdirectories named by extension ID
+                    File extensionsDir = new File(userDataDir, "Default/Extensions");
+                    api.logging().logToOutput("Looking for Extensions directory at: " + extensionsDir.getAbsolutePath());
+
+                    if (!extensionsDir.exists()) {
+                        extensionsDir = new File(userDataDir, "Extensions");
+                        api.logging().logToOutput("Trying alternate Extensions directory at: " + extensionsDir.getAbsolutePath());
+                    }
+
+                    if (extensionsDir.exists() && extensionsDir.isDirectory()) {
+                        File[] extensionDirs = extensionsDir.listFiles(File::isDirectory);
+                        if (extensionDirs != null && extensionDirs.length > 0) {
+                            // Get the first extension ID (assumes only one extension is loaded)
+                            for (File dir : extensionDirs) {
+                                String dirName = dir.getName();
+                                // Extension IDs are 32 lowercase letters
+                                if (dirName.matches("[a-z]{32}")) {
+                                    extId = dirName;
+                                    api.logging().logToOutput("Found extension ID from Extensions directory: " + extId);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // Fallback: Check Preferences file
+                    if (extId == null) {
+                        File prefsFile = new File(userDataDir, "Preferences");
+                        if (!prefsFile.exists()) {
+                            prefsFile = new File(userDataDir, "Default/Preferences");
+                        }
+
+                        if (prefsFile.exists()) {
+                            String prefsContent = java.nio.file.Files.readString(prefsFile.toPath());
+                            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\"([a-z]{32})\"");
+                            java.util.regex.Matcher matcher = pattern.matcher(prefsContent);
+                            if (matcher.find()) {
+                                extId = matcher.group(1);
+                                api.logging().logToOutput("Found extension ID in preferences: " + extId);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    api.logging().logToOutput("Error detecting extension ID: " + e.getMessage());
+                }
+
+                if (extId == null) {
+                    api.logging().logToError("Could not detect extension ID, extension features will not be configured");
+                }
+            }
+
+            if (extId != null) {
+                try {
+                    Page extPage = ctx.newPage();
+                    extPage.navigate("chrome-extension://" + extId + "/settings/settings.html");
+                    extPage.evaluate("""
+                        () => {
+                            const settings = localStorage.getItem("DOMInvaderSettings");
+                            settings.canary = "foobar";
+                            localStorage.setItem('DOMInvaderSettings', settings);
+                        }
+                    """);
+                    api.logging().logToOutput("Configured extension settings");
+                } catch (Exception e) {
+                    api.logging().logToError("Error configuring extension: " + e.getMessage());
+                }
+            }
+
+            Page page = ctx.newPage();
 
             for (String url : urls) {
                 try {
@@ -56,13 +132,13 @@ public class PlaywrightRenderer {
             }
 
             if (closeBrowser) {
-                context.close();
+                ctx.close();
                 playwright.close();
             }
         } catch (Exception e) {
             api.logging().logToError("Error in Playwright rendering: " + e.getMessage());
-            if (context != null) {
-                context.close();
+            if (ctx != null) {
+                ctx.close();
             }
             if (playwright != null) {
                 playwright.close();
