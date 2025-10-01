@@ -49,9 +49,6 @@ public class PlaywrightRenderer {
             if (extensionPath != null && !extensionPath.isEmpty()) {
                 // Try to get extension ID by checking the Extension State directory
                 try {
-                    // Wait for browser to fully initialize and write extension files
-                    Thread.sleep(3000);
-
                     // Check for Extensions directory which contains subdirectories named by extension ID
                     File extensionsDir = new File(userDataDir, "Default/Extensions");
                     api.logging().logToOutput("Looking for Extensions directory at: " + extensionsDir.getAbsolutePath());
@@ -113,6 +110,7 @@ public class PlaywrightRenderer {
                         }
                     """);
                     api.logging().logToOutput("Configured extension settings");
+                    extPage.close();
                 } catch (Exception e) {
                     api.logging().logToError("Error configuring extension: " + e.getMessage());
                 }
