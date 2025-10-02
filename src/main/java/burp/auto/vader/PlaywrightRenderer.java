@@ -9,84 +9,40 @@ import java.util.List;
 
 import static burp.auto.vader.AutoVaderExtension.*;
 
+/**
+ * Playwright-based browser renderer with DOM Invader extension support.
+ *
+ * Example usage with different profiles:
+ * <pre>
+ * // Default profile
+ * PlaywrightRenderer renderer = new PlaywrightRenderer();
+ *
+ * // Custom canary
+ * PlaywrightRenderer renderer = new PlaywrightRenderer(
+ *     new DOMInvaderConfig(DOMInvaderConfig.customProfile("mycustom123"))
+ * );
+ *
+ * // Full custom profile
+ * DOMInvaderConfig.Profile profile = new DOMInvaderConfig.Profile()
+ *     .setCanary("testcanary")
+ *     .setPrototypePollution(true)
+ *     .setDomClobbering(true)
+ *     .setPostmessage(true)
+ *     .setInjectCanary(true);
+ * PlaywrightRenderer renderer = new PlaywrightRenderer(new DOMInvaderConfig(profile));
+ * </pre>
+ */
 public class PlaywrightRenderer {
 
-    private final String sinkCallback = """
-        function(sinkDetails, sinks, interestingSinks) {
-            const payload = {
-                isInteresting: sinkDetails.isInteresting,
-                canary: sinkDetails.canary,
-                sink: sinkDetails.sink,
-                stackTrace: sinkDetails.stackTrace,
-                value: sinkDetails.value,
-                url: sinkDetails.url,
-                framePath: sinkDetails.framePath,
-                event: sinkDetails.event,
-                outerHTML: sinkDetails.outerHTML
-            };
-        
-            sendToBurp(payload,"sink");
-            return true; // return true to log sink
-        }
-    """;
+    private final DOMInvaderConfig domInvaderConfig;
 
-    private final String sourceCallback = """
-        function(sourceDetails, sources) {
-            const payload = {
-                isInteresting: sourceDetails.isInteresting,
-                canary: sourceDetails.canary,
-                source: sourceDetails.source,
-                stackTrace: sourceDetails.stackTrace,
-                value: sourceDetails.value,
-                url: sourceDetails.url,
-                framePath: sourceDetails.framePath,
-                event: sourceDetails.event
-            };
-        
-            sendToBurp(payload, "source");
-            return true; // return true to log source
-        }
-    """;
+    public PlaywrightRenderer() {
+        this(new DOMInvaderConfig());
+    }
 
-    private final String messageCallback = """
-        function(msg) {
-            const payload = {
-                isInteresting: msg.isInteresting,
-                canary: msg.canary,
-                id: msg.id,
-                title: msg.title,
-                description: msg.description,
-                url: msg.url,
-                charactersEncoded: msg.charactersEncoded,
-                confidence: msg.confidence,
-                dataAccessed: msg.dataAccessed,
-                dataStackTrace: msg.dataStackTrace,
-                eventListener: msg.eventListener,
-                eventListenerStack: msg.eventListenerStack,
-                followupVerified: msg.followupVerified,
-                manipulatedData: msg.manipulatedData,
-                messageType: msg.messageType,
-                origin: msg.origin,
-                originChecked: msg.originChecked,
-                originCheckedFirst: msg.originCheckedFirst,
-                originStackTrace: msg.originStackTrace,
-                originalOrigin: msg.originalOrigin,
-                postMessageData: msg.postMessageData,
-                severity: msg.severity,
-                sink: msg.sink,
-                sinkValue: msg.sinkValue,
-                sourceAccessed: msg.sourceAccessed,
-                sourceId: msg.sourceId,
-                spoofed: msg.spoofed,
-                verified: msg.verified,
-                framePathFrom: msg.framePathFrom,
-                framePathTo: msg.framePathTo
-            };
-        
-            sendToBurp(payload, "message");
-            return true; // return true to log message
-        }
-    """;
+    public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig) {
+        this.domInvaderConfig = domInvaderConfig;
+    }
 
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless) {
         Playwright playwright = null;
@@ -181,14 +137,7 @@ public class PlaywrightRenderer {
                 try {
                     Page extPage = ctx.newPage();
                     extPage.navigate("chrome-extension://" + extId + "/settings/settings.html");
-                    extPage.evaluate("""
-                        () => {
-                            chrome.storage.local.set({
-                                canary: 'burpdomxss',
-                                sinkCallback: "function(){console.log(sendToBurp('Hello').then(m=>m));return true;}"
-                            });
-                        }
-                    """);
+                    extPage.evaluate(domInvaderConfig.generateSettingsScript());
                     api.logging().logToOutput("Configured extension settings");
                     extPage.close();
                 } catch (Exception e) {
@@ -203,7 +152,11 @@ public class PlaywrightRenderer {
                     ctx.exposeBinding("sendToBurp", (source, arguments) -> {
                         String frameUrl = source.frame().url();
                         if (!frameUrl.startsWith(url)) throw new RuntimeException("blocked");
-                        if (arguments.length != 1 || !(arguments[0] instanceof String payload)) throw new RuntimeException("bad args");
+                        if (arguments.length != 2 || !(arguments[0] instanceof String payload)) throw new RuntimeException("bad args");
+                        String json = arguments[0].toString();
+                        String type = arguments[1].toString();
+                        api.logging().logToOutput("JSON:" + json);
+                        api.logging().logToOutput("type:" + type);
                         return "ack:" + payload;
                     });
 
