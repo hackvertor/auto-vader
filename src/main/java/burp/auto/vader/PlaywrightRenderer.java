@@ -80,16 +80,8 @@ public class PlaywrightRenderer {
             String extId = null;
 
             if (extensionPath != null && !extensionPath.isEmpty()) {
-                // Try to get extension ID from the browser
                 try {
-                    // Create a temporary page to run JavaScript that queries the extension ID
                     Page tempPage = ctx.newPage();
-
-                    // Try to get the extension ID by loading a known extension resource
-                    // Unpacked extensions typically use a stable ID based on the path
-                    // Try multiple methods to detect the extension ID
-
-                    // Method 1: Try to access chrome://extensions and scrape it
                     try {
                         tempPage.navigate("chrome://extensions");
                         tempPage.click("cr-toggle#devMode");
