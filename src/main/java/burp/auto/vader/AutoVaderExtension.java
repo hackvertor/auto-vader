@@ -34,12 +34,10 @@ public class AutoVaderExtension implements BurpExtension
                 .withTitle("Auto Vader Settings")
                 .withDescription("""                       
                         Burp Chromium path - Is the path to where Burp browser is installed
-                        DOM Invader path - The path where the DOM Invader extension is installed
-                        DOM Invader canary - A random string DOM Invader uses to find a tainted sink
+                        DOM Invader path - The path where the DOM Invader extension is installed                      
                         """)
                 .withKeywords("DOM", "Invader", "Auto", "Vader")
                 .withSettings(
-                        SettingsPanelSetting.stringSetting("DOM Invader canary", ""),
                         SettingsPanelSetting.stringSetting("Burp Chromium path", chromiumPath),
                         SettingsPanelSetting.stringSetting("DOM Invader path", domInvaderPath)
                 )

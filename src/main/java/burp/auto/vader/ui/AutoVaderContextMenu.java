@@ -20,6 +20,14 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     public List<Component> provideMenuItems(ContextMenuEvent event) {
         List<Component> menuItemList = new ArrayList<>();
         JMenu menu = new JMenu("Auto Vader");
+        JMenuItem openBrowser = new JMenuItem("Open browser");
+        openBrowser.addActionListener(e -> {
+            AutoVaderExtension.executorService.submit(() -> {
+                String domInvaderPath = settings.getString("DOM Invader path");
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(""))).renderUrls(List.of("https://portswigger-labs.net"), domInvaderPath, false, false);
+            });
+        });
+        menu.add(openBrowser);
         JMenuItem getAllSinksMenu = new JMenuItem("Get all sinks");
         getAllSinksMenu.setEnabled(!event.selectedRequestResponses().isEmpty());
         getAllSinksMenu.addActionListener(e -> {
@@ -28,7 +36,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                 List<String> urls = event.selectedRequestResponses().stream()
                         .map(requestResponse -> requestResponse.request().url())
                         .toList();
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(""))).renderUrls(urls, domInvaderPath, false, false);
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(""))).renderUrls(urls, domInvaderPath, true, true);
                 api.logging().logToOutput("Rendered " + urls.size() + " URLs via Playwright");
             });
         });

@@ -243,7 +243,9 @@ public class DOMInvaderConfig {
 
         return """
             () => {
-                chrome.storage.local.set(%s);
+                chrome.storage.local.set(%s, () => {
+                    console.log('DOM Invader settings saved');
+                });
             }
         """.formatted(settingsJson.toString());
     }

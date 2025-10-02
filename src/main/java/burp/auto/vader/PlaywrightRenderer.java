@@ -80,50 +80,29 @@ public class PlaywrightRenderer {
             String extId = null;
 
             if (extensionPath != null && !extensionPath.isEmpty()) {
-                // Try to get extension ID by checking the Extension State directory
+                // Try to get extension ID from the browser
                 try {
-                    // Check for Extensions directory which contains subdirectories named by extension ID
-                    File extensionsDir = new File(userDataDir, "Default/Extensions");
-                    api.logging().logToOutput("Looking for Extensions directory at: " + extensionsDir.getAbsolutePath());
+                    // Create a temporary page to run JavaScript that queries the extension ID
+                    Page tempPage = ctx.newPage();
 
-                    if (!extensionsDir.exists()) {
-                        extensionsDir = new File(userDataDir, "Extensions");
-                        api.logging().logToOutput("Trying alternate Extensions directory at: " + extensionsDir.getAbsolutePath());
-                    }
+                    // Try to get the extension ID by loading a known extension resource
+                    // Unpacked extensions typically use a stable ID based on the path
+                    // Try multiple methods to detect the extension ID
 
-                    if (extensionsDir.exists() && extensionsDir.isDirectory()) {
-                        File[] extensionDirs = extensionsDir.listFiles(File::isDirectory);
-                        if (extensionDirs != null && extensionDirs.length > 0) {
-                            // Get the first extension ID (assumes only one extension is loaded)
-                            for (File dir : extensionDirs) {
-                                String dirName = dir.getName();
-                                // Extension IDs are 32 lowercase letters
-                                if (dirName.matches("[a-z]{32}")) {
-                                    extId = dirName;
-                                    api.logging().logToOutput("Found extension ID from Extensions directory: " + extId);
-                                    break;
-                                }
-                            }
+                    // Method 1: Try to access chrome://extensions and scrape it
+                    try {
+                        tempPage.navigate("chrome://extensions");
+                        tempPage.click("cr-toggle#devMode");
+                        Locator extensionCard = tempPage.locator("extensions-item").first();
+                        extId = extensionCard.getAttribute("id");
+
+                        if (extId != null) {
+                            api.logging().logToOutput("Found extension ID from chrome://extensions: " + extId);
                         }
+                    } catch (Exception e) {
+                        api.logging().logToOutput("Could not access chrome://extensions: " + e.getMessage());
                     }
-
-                    // Fallback: Check Preferences file
-                    if (extId == null) {
-                        File prefsFile = new File(userDataDir, "Preferences");
-                        if (!prefsFile.exists()) {
-                            prefsFile = new File(userDataDir, "Default/Preferences");
-                        }
-
-                        if (prefsFile.exists()) {
-                            String prefsContent = java.nio.file.Files.readString(prefsFile.toPath());
-                            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\"([a-z]{32})\"");
-                            java.util.regex.Matcher matcher = pattern.matcher(prefsContent);
-                            if (matcher.find()) {
-                                extId = matcher.group(1);
-                                api.logging().logToOutput("Found extension ID in preferences: " + extId);
-                            }
-                        }
-                    }
+                    tempPage.close();
                 } catch (Exception e) {
                     api.logging().logToOutput("Error detecting extension ID: " + e.getMessage());
                 }
