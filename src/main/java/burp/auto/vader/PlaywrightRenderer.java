@@ -11,6 +11,83 @@ import static burp.auto.vader.AutoVaderExtension.*;
 
 public class PlaywrightRenderer {
 
+    private final String sinkCallback = """
+        function(sinkDetails, sinks, interestingSinks) {
+            const payload = {
+                isInteresting: sinkDetails.isInteresting,
+                canary: sinkDetails.canary,
+                sink: sinkDetails.sink,
+                stackTrace: sinkDetails.stackTrace,
+                value: sinkDetails.value,
+                url: sinkDetails.url,
+                framePath: sinkDetails.framePath,
+                event: sinkDetails.event,
+                outerHTML: sinkDetails.outerHTML
+            };
+        
+            sendToBurp(payload,"sink");
+            return true; // return true to log sink
+        }
+    """;
+
+    private final String sourceCallback = """
+        function(sourceDetails, sources) {
+            const payload = {
+                isInteresting: sourceDetails.isInteresting,
+                canary: sourceDetails.canary,
+                source: sourceDetails.source,
+                stackTrace: sourceDetails.stackTrace,
+                value: sourceDetails.value,
+                url: sourceDetails.url,
+                framePath: sourceDetails.framePath,
+                event: sourceDetails.event
+            };
+        
+            sendToBurp(payload, "source");
+            return true; // return true to log source
+        }
+    """;
+
+    private final String messageCallback = """
+        function(msg) {
+            const payload = {
+                isInteresting: msg.isInteresting,
+                canary: msg.canary,
+                id: msg.id,
+                title: msg.title,
+                description: msg.description,
+                url: msg.url,
+                charactersEncoded: msg.charactersEncoded,
+                confidence: msg.confidence,
+                dataAccessed: msg.dataAccessed,
+                dataStackTrace: msg.dataStackTrace,
+                eventListener: msg.eventListener,
+                eventListenerStack: msg.eventListenerStack,
+                followupVerified: msg.followupVerified,
+                manipulatedData: msg.manipulatedData,
+                messageType: msg.messageType,
+                origin: msg.origin,
+                originChecked: msg.originChecked,
+                originCheckedFirst: msg.originCheckedFirst,
+                originStackTrace: msg.originStackTrace,
+                originalOrigin: msg.originalOrigin,
+                postMessageData: msg.postMessageData,
+                severity: msg.severity,
+                sink: msg.sink,
+                sinkValue: msg.sinkValue,
+                sourceAccessed: msg.sourceAccessed,
+                sourceId: msg.sourceId,
+                spoofed: msg.spoofed,
+                verified: msg.verified,
+                framePathFrom: msg.framePathFrom,
+                framePathTo: msg.framePathTo
+            };
+        
+            sendToBurp(payload, "message");
+            return true; // return true to log message
+        }
+    """;
+
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless) {
         Playwright playwright = null;
         BrowserContext ctx = null;
@@ -106,7 +183,10 @@ public class PlaywrightRenderer {
                     extPage.navigate("chrome-extension://" + extId + "/settings/settings.html");
                     extPage.evaluate("""
                         () => {
-                            chrome.storage.local.set({canary: 'foobar'});
+                            chrome.storage.local.set({
+                                canary: 'burpdomxss',
+                                sinkCallback: "function(){console.log(sendToBurp('Hello').then(m=>m));return true;}"
+                            });
                         }
                     """);
                     api.logging().logToOutput("Configured extension settings");
@@ -120,8 +200,15 @@ public class PlaywrightRenderer {
 
             for (String url : urls) {
                 try {
-                    page.navigate(url, new Page.NavigateOptions()
-                            .setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    ctx.exposeBinding("sendToBurp", (source, arguments) -> {
+                        String frameUrl = source.frame().url();
+                        if (!frameUrl.startsWith(url)) throw new RuntimeException("blocked");
+                        if (arguments.length != 1 || !(arguments[0] instanceof String payload)) throw new RuntimeException("bad args");
+                        return "ack:" + payload;
+                    });
+
+                    page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    page.reload();
                 } catch (Exception e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());
                 }
