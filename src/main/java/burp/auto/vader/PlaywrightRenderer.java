@@ -196,7 +196,6 @@ public class PlaywrightRenderer {
             api.logging().logToError("Error finding Burp Chromium path: " + e.getMessage());
         }
 
-        // Fallback to empty string if not found
         return "";
     }
 }
