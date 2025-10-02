@@ -132,7 +132,6 @@ public class PlaywrightRenderer {
                     });
 
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                    page.reload();
                 } catch (Exception e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());
                 }

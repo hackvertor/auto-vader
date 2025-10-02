@@ -85,7 +85,6 @@ public class DOMInvaderConfig {
     public static class Profile {
         private String canary = "burpdomxss";
         private boolean enabled = true;
-        private boolean browserReloadRequired = false;
         private boolean crossDomainLeaks = false;
         private String[] disabledSinks = new String[0];
         private boolean domClobbering = false;
@@ -95,7 +94,6 @@ public class DOMInvaderConfig {
         private boolean guessStrings = false;
         private boolean injectCanary = false;
         private boolean injectIntoSources = false;
-        private String lastTab = "nav-recorder-tab";
         private boolean permissionsPolicy = false;
         private boolean postmessage = false;
         private boolean preventRedirection = false;
@@ -159,7 +157,6 @@ public class DOMInvaderConfig {
             Map<String, Object> settings = new HashMap<>();
             settings.put("canary", canary);
             settings.put("enabled", enabled);
-            settings.put("browserReloadRequired", browserReloadRequired);
             settings.put("crossDomainLeaks", crossDomainLeaks);
             settings.put("disabledSinks", disabledSinks);
             settings.put("domClobbering", domClobbering);
@@ -169,7 +166,6 @@ public class DOMInvaderConfig {
             settings.put("guessStrings", guessStrings);
             settings.put("injectCanary", injectCanary);
             settings.put("injectIntoSources", injectIntoSources);
-            settings.put("lastTab", lastTab);
             settings.put("permissionsPolicy", permissionsPolicy);
             settings.put("postmessage", postmessage);
             settings.put("preventRedirection", preventRedirection);

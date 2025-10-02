@@ -36,7 +36,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                 List<String> urls = event.selectedRequestResponses().stream()
                         .map(requestResponse -> requestResponse.request().url())
                         .toList();
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(""))).renderUrls(urls, domInvaderPath, true, true);
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(""))).renderUrls(urls, domInvaderPath, true, false);
                 api.logging().logToOutput("Rendered " + urls.size() + " URLs via Playwright");
             });
         });
