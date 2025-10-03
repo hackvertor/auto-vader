@@ -6,81 +6,78 @@ import java.util.Map;
 public class DOMInvaderConfig {
 
     private final String sinkCallback = """
-        function(sinkDetails, sinks, interestingSinks) {
-            const payload = {
-                isInteresting: sinkDetails.isInteresting,
-                canary: sinkDetails.canary,
-                sink: sinkDetails.sink,
-                stackTrace: sinkDetails.stackTrace,
-                value: sinkDetails.value,
-                url: sinkDetails.url,
-                framePath: sinkDetails.framePath,
-                event: sinkDetails.event,
-                outerHTML: sinkDetails.outerHTML
-            };
+function(sinkDetails, sinks, interestingSinks) {
+    const payload = {
+        isInteresting: sinkDetails.isInteresting,
+        canary: sinkDetails.canary,
+        sink: sinkDetails.sink,
+        stackTrace: sinkDetails.stackTrace,
+        value: sinkDetails.value,
+        url: sinkDetails.url,
+        framePath: sinkDetails.framePath,
+        event: sinkDetails.event,
+        outerHTML: sinkDetails.outerHTML
+    };
 
-            sendToBurp(payload,"sink");
-            return true; // return true to log sink
-        }
-    """;
+    sendToBurp(payload,"sink");
+    return true; // return true to log sink
+}""";
 
     private final String sourceCallback = """
-        function(sourceDetails, sources) {
-            const payload = {
-                isInteresting: sourceDetails.isInteresting,
-                canary: sourceDetails.canary,
-                source: sourceDetails.source,
-                stackTrace: sourceDetails.stackTrace,
-                value: sourceDetails.value,
-                url: sourceDetails.url,
-                framePath: sourceDetails.framePath,
-                event: sourceDetails.event
-            };
+function(sourceDetails, sources) {
+    const payload = {
+        isInteresting: sourceDetails.isInteresting,
+        canary: sourceDetails.canary,
+        source: sourceDetails.source,
+        stackTrace: sourceDetails.stackTrace,
+        value: sourceDetails.value,
+        url: sourceDetails.url,
+        framePath: sourceDetails.framePath,
+        event: sourceDetails.event
+    };
 
-            sendToBurp(payload, "source");
-            return true; // return true to log source
-        }
-    """;
+    sendToBurp(payload, "source");
+    return true; // return true to log source
+}""";
 
     private final String messageCallback = """
-        function(msg) {
-            const payload = {
-                isInteresting: msg.isInteresting,
-                canary: msg.canary,
-                id: msg.id,
-                title: msg.title,
-                description: msg.description,
-                url: msg.url,
-                charactersEncoded: msg.charactersEncoded,
-                confidence: msg.confidence,
-                dataAccessed: msg.dataAccessed,
-                dataStackTrace: msg.dataStackTrace,
-                eventListener: msg.eventListener,
-                eventListenerStack: msg.eventListenerStack,
-                followupVerified: msg.followupVerified,
-                manipulatedData: msg.manipulatedData,
-                messageType: msg.messageType,
-                origin: msg.origin,
-                originChecked: msg.originChecked,
-                originCheckedFirst: msg.originCheckedFirst,
-                originStackTrace: msg.originStackTrace,
-                originalOrigin: msg.originalOrigin,
-                postMessageData: msg.postMessageData,
-                severity: msg.severity,
-                sink: msg.sink,
-                sinkValue: msg.sinkValue,
-                sourceAccessed: msg.sourceAccessed,
-                sourceId: msg.sourceId,
-                spoofed: msg.spoofed,
-                verified: msg.verified,
-                framePathFrom: msg.framePathFrom,
-                framePathTo: msg.framePathTo
-            };
+function(msg) {
+    const payload = {
+        isInteresting: msg.isInteresting,
+        canary: msg.canary,
+        id: msg.id,
+        title: msg.title,
+        description: msg.description,
+        url: msg.url,
+        charactersEncoded: msg.charactersEncoded,
+        confidence: msg.confidence,
+        dataAccessed: msg.dataAccessed,
+        dataStackTrace: msg.dataStackTrace,
+        eventListener: msg.eventListener,
+        eventListenerStack: msg.eventListenerStack,
+        followupVerified: msg.followupVerified,
+        manipulatedData: msg.manipulatedData,
+        messageType: msg.messageType,
+        origin: msg.origin,
+        originChecked: msg.originChecked,
+        originCheckedFirst: msg.originCheckedFirst,
+        originStackTrace: msg.originStackTrace,
+        originalOrigin: msg.originalOrigin,
+        postMessageData: msg.postMessageData,
+        severity: msg.severity,
+        sink: msg.sink,
+        sinkValue: msg.sinkValue,
+        sourceAccessed: msg.sourceAccessed,
+        sourceId: msg.sourceId,
+        spoofed: msg.spoofed,
+        verified: msg.verified,
+        framePathFrom: msg.framePathFrom,
+        framePathTo: msg.framePathTo
+    };
 
-            sendToBurp(payload, "message");
-            return true; // return true to log message
-        }
-    """;
+    sendToBurp(payload, "message");
+    return true; // return true to log message
+}""";
 
     public static class Profile {
         private String canary = "burpdomxss";
@@ -232,10 +229,10 @@ public class DOMInvaderConfig {
         }
 
         // Add callbacks
-        settingsJson.append(",\n                sinkCallback: \"").append(escapeJavaScript(sinkCallback)).append("\"");
-        settingsJson.append(",\n                sourceCallback: \"").append(escapeJavaScript(sourceCallback)).append("\"");
-        settingsJson.append(",\n                messageCallback: \"").append(escapeJavaScript(messageCallback)).append("\"");
-        settingsJson.append("\n            }");
+        settingsJson.append(",\nsinkCallback: \"").append(escapeJavaScript(sinkCallback)).append("\"");
+        settingsJson.append(",\nsourceCallback: \"").append(escapeJavaScript(sourceCallback)).append("\"");
+        settingsJson.append(",\nmessageCallback: \"").append(escapeJavaScript(messageCallback)).append("\"");
+        settingsJson.append("\n}");
 
         return """
             () => {

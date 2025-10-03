@@ -24,7 +24,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         openBrowser.addActionListener(e -> {
             AutoVaderExtension.executorService.submit(() -> {
                 String domInvaderPath = settings.getString("DOM Invader path");
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(""))).renderUrls(List.of("https://portswigger-labs.net"), domInvaderPath, false, false);
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile("foobar"))).renderUrls(List.of("https://portswigger-labs.net"), domInvaderPath, false, false);
             });
         });
         menu.add(openBrowser);
@@ -43,21 +43,5 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         menu.add(getAllSinksMenu);
         menuItemList.add(menu);
         return menuItemList;
-    }
-
-    private void copyToClipboard(String text) {
-        StringSelection selection = new StringSelection(text);
-        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-        clipboard.setContents(selection, selection);
-    }
-
-    private JTextArea generateWrapTextArea(String text) {
-        JTextArea area = new JTextArea(text);
-        area.setWrapStyleWord(true);
-        area.setLineWrap(true);
-        area.setEditable(false);
-        area.setOpaque(false);
-        area.setBorder(null);
-        return area;
     }
 }

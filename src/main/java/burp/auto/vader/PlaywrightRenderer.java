@@ -130,8 +130,16 @@ public class PlaywrightRenderer {
                         api.logging().logToOutput("type:" + type);
                         return "ack:" + payload;
                     });
-
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+
+                    // Wait for DOM Invader to complete
+                    api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
+                    page.waitForFunction(
+                            "() => window.BurpDOMInvader && window.BurpDOMInvader.isComplete",
+                            null,
+                            new Page.WaitForFunctionOptions().setPollingInterval(100).setTimeout(30000)
+                    );
+                    api.logging().logToOutput("DOM Invader analysis complete for: " + url);
                 } catch (Exception e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());
                 }
