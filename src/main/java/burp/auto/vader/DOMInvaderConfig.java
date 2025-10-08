@@ -21,7 +21,7 @@ function(sinkDetails, sinks, interestingSinks) {
         outerHTML: sinkDetails.outerHTML
     };
 
-    sendToBurp(payload,"sink");
+    sendToBurp(JSON.stringify(payload),"sink");
     return false;
 }""";
 
@@ -38,7 +38,7 @@ function(sourceDetails, sources) {
         event: sourceDetails.event
     };
 
-    sendToBurp(payload, "source");
+    sendToBurp(JSON.stringify(payload), "source");
     return false;
 }""";
 
@@ -77,7 +77,7 @@ function(msg) {
         framePathTo: msg.framePathTo
     };
 
-    sendToBurp(payload, "message");
+    sendToBurp(JSON.stringify(payload), "message");
     return false;
 }""";
 
