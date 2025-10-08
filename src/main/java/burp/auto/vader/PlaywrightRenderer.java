@@ -144,7 +144,7 @@ public class PlaywrightRenderer {
                             new Page.WaitForFunctionOptions().setPollingInterval(100).setTimeout(30000)
                     );
                     api.logging().logToOutput("DOM Invader analysis complete for: " + url);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());
                 }
             }
