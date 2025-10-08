@@ -20,8 +20,8 @@ function(sinkDetails, sinks, interestingSinks) {
         event: sinkDetails.event,
         outerHTML: sinkDetails.outerHTML
     };
-
-    sendToBurp(JSON.stringify(payload),"sink");
+  
+    sendToBurp(payload,"sink");
     return false;
 }""";
 
@@ -38,7 +38,7 @@ function(sourceDetails, sources) {
         event: sourceDetails.event
     };
 
-    sendToBurp(JSON.stringify(payload), "source");
+    sendToBurp(payload, "source");
     return false;
 }""";
 
@@ -77,7 +77,7 @@ function(msg) {
         framePathTo: msg.framePathTo
     };
 
-    sendToBurp(JSON.stringify(payload), "message");
+    sendToBurp(payload, "message");
     return false;
 }""";
 

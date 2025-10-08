@@ -5,11 +5,10 @@ import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 import burp.auto.vader.AutoVaderExtension;
 import burp.auto.vader.DOMInvaderConfig;
 import burp.auto.vader.PlaywrightRenderer;
+import burp.auto.vader.Utils;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.Clipboard;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,6 +20,51 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     public List<Component> provideMenuItems(ContextMenuEvent event) {
         List<Component> menuItemList = new ArrayList<>();
         JMenu menu = new JMenu("Auto Vader");
+        JMenuItem scanAllQueryParametersMenu = new JMenuItem("Scan all query params");
+        scanAllQueryParametersMenu.addActionListener(
+                e -> {
+                    AutoVaderExtension.executorService.submit(
+                            () -> {
+                                String domInvaderPath = settings.getString("DOM Invader path");
+                                String canary = Utils.generateCanary();
+                                List<String> urls = null;
+
+                                if (!event.selectedRequestResponses().isEmpty()) {
+                                    urls =
+                                            event.selectedRequestResponses().stream()
+                                                    .map(requestResponse -> requestResponse.request().url())
+                                                    .toList();
+                                } else {
+                                    if (event.messageEditorRequestResponse().isPresent()) {
+                                        urls =
+                                                Collections.singletonList(
+                                                        event
+                                                                .messageEditorRequestResponse()
+                                                                .get()
+                                                                .requestResponse()
+                                                                .request()
+                                                                .url());
+                                    } else {
+                                        return;
+                                    }
+                                }
+
+                                // Enumerate query parameters and inject canary into each one
+                                List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary);
+                                api.logging().logToOutput("Urls:" + enumeratedUrls);
+                                if (enumeratedUrls.isEmpty()) {
+                                    api.logging().logToOutput("No query parameters found to scan");
+                                    return;
+                                }
+
+                                api.logging().logToOutput("Scanning " + enumeratedUrls.size() + " parameter variations with canary: " + canary);
+
+                                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(canary)))
+                                        .renderUrls(enumeratedUrls, domInvaderPath, true, false);
+                                api.logging().logToOutput("Completed scanning " + enumeratedUrls.size() + " URLs via AutoVader");
+                            });
+                });
+        menu.add(scanAllQueryParametersMenu);
         JMenuItem getAllSinksMenu = new JMenuItem("Get all sinks");
     getAllSinksMenu.addActionListener(
         e -> {
@@ -50,9 +94,9 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                   }
                 }
 
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile("burpdomxss")))
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile("")))
                     .renderUrls(urls, domInvaderPath, true, false);
-                api.logging().logToOutput("Rendered " + urls.size() + " URLs via Playwright");
+                api.logging().logToOutput("Got sinks for " + urls.size() + " URLs via AutoVader");
               });
         });
         menu.add(getAllSinksMenu);

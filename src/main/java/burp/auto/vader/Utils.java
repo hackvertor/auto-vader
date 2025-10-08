@@ -1,0 +1,123 @@
+package burp.auto.vader;
+
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Utils {
+
+    private static final String LETTERS = "abcdefghijklmnopqrstuvwxyz";
+    private static final String ALPHANUMERIC = "abcdefghijklmnopqrstuvwxyz0123456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    /**
+     * Generates a random 10-character canary string.
+     * First character is always a letter, remaining characters are alphanumeric.
+     *
+     * @return A random 10-character canary string
+     */
+    public static String generateCanary() {
+        StringBuilder canary = new StringBuilder(10);
+
+        // First character must be a letter
+        canary.append(LETTERS.charAt(RANDOM.nextInt(LETTERS.length())));
+
+        // Remaining 9 characters are alphanumeric
+        for (int i = 1; i < 10; i++) {
+            canary.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
+        }
+
+        return canary.toString();
+    }
+
+    /**
+     * Enumerates all query parameters in a URL and creates a list of URLs
+     * with the canary injected into each parameter individually.
+     *
+     * For example:
+     * Input: "http://example.com/page?x=123&y=456", canary: "abc123"
+     * Output: ["http://example.com/page?x=abc123&y=456", "http://example.com/page?x=123&y=abc123"]
+     *
+     * @param url The original URL
+     * @param canary The canary value to inject
+     * @return List of URLs with canary injected into each parameter
+     */
+    public static List<String> enumerateQueryParameters(String url, String canary) {
+        List<String> enumeratedUrls = new ArrayList<>();
+
+        // Split URL into base and query string
+        int queryStart = url.indexOf('?');
+        if (queryStart == -1) {
+            // No query parameters
+            return enumeratedUrls;
+        }
+
+        String baseUrl = url.substring(0, queryStart);
+        String queryString = url.substring(queryStart + 1);
+
+        // Handle fragment if present
+        String fragment = "";
+        int fragmentIndex = queryString.indexOf('#');
+        if (fragmentIndex != -1) {
+            fragment = queryString.substring(fragmentIndex);
+            queryString = queryString.substring(0, fragmentIndex);
+        }
+
+        // Parse parameters
+        String[] params = queryString.split("&");
+        if (params.length == 0) {
+            return enumeratedUrls;
+        }
+
+        // Create a URL for each parameter with canary injected
+        for (int i = 0; i < params.length; i++) {
+            StringBuilder newUrl = new StringBuilder(baseUrl).append("?");
+
+            for (int j = 0; j < params.length; j++) {
+                if (j > 0) {
+                    newUrl.append("&");
+                }
+
+                String param = params[j];
+                int equalsIndex = param.indexOf('=');
+
+                if (j == i) {
+                    // Inject canary into this parameter
+                    if (equalsIndex != -1) {
+                        String paramName = param.substring(0, equalsIndex);
+                        newUrl.append(paramName).append("=").append(canary);
+                    } else {
+                        // Parameter without value
+                        newUrl.append(param).append("=").append(canary);
+                    }
+                } else {
+                    // Keep original parameter
+                    newUrl.append(param);
+                }
+            }
+
+            newUrl.append(fragment);
+            enumeratedUrls.add(newUrl.toString());
+        }
+
+        return enumeratedUrls;
+    }
+
+    /**
+     * Enumerates query parameters for multiple URLs.
+     *
+     * @param urls List of URLs to enumerate
+     * @param canary The canary value to inject
+     * @return List of all enumerated URLs
+     */
+    public static List<String> enumerateQueryParameters(List<String> urls, String canary) {
+        List<String> allEnumeratedUrls = new ArrayList<>();
+
+        for (String url : urls) {
+            List<String> enumerated = enumerateQueryParameters(url, canary);
+            allEnumeratedUrls.addAll(enumerated);
+        }
+
+        return allEnumeratedUrls;
+    }
+}

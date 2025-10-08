@@ -35,6 +35,7 @@ import static burp.auto.vader.AutoVaderExtension.*;
 public class PlaywrightRenderer {
 
     private final DOMInvaderConfig domInvaderConfig;
+    private final DOMInvaderMessageParser messageParser;
 
     public PlaywrightRenderer() {
         this(new DOMInvaderConfig());
@@ -42,6 +43,7 @@ public class PlaywrightRenderer {
 
     public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig) {
         this.domInvaderConfig = domInvaderConfig;
+        this.messageParser = new DOMInvaderMessageParser(AutoVaderExtension.dataStore);
     }
 
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless) {
@@ -128,14 +130,17 @@ public class PlaywrightRenderer {
                         String frameUrl = source.frame().url();
                         if (!frameUrl.startsWith(url)) throw new RuntimeException("blocked");
                         if (arguments.length != 2) throw new RuntimeException("bad args");
-                        String json = arguments[0].toString();
+
+                        // arguments[0] is a JSHandle - need to evaluate it as JSON
+                        String json = source.page().evaluate("(obj) => JSON.stringify(obj)", arguments[0]).toString();
                         String type = arguments[1].toString();
-                        api.logging().logToOutput("JSON:" + json);
-                        api.logging().logToOutput("type:" + type);
-                        return "ack";
+
+                        // Parse and store the message
+                        boolean success = messageParser.parseAndStore(json, type, url);
+
+                        return success ? "ack" : "error";
                     });
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-
                     // Wait for DOM Invader to complete
                     api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
                     page.waitForFunction(
@@ -143,6 +148,7 @@ public class PlaywrightRenderer {
                             null,
                             new Page.WaitForFunctionOptions().setPollingInterval(100).setTimeout(30000)
                     );
+                    Thread.sleep(50000);
                     api.logging().logToOutput("DOM Invader analysis complete for: " + url);
                 } catch (Throwable e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());

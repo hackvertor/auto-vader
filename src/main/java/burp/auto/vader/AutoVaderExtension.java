@@ -6,6 +6,8 @@ import burp.api.montoya.ui.settings.SettingsPanelPersistence;
 import burp.api.montoya.ui.settings.SettingsPanelSetting;
 import burp.api.montoya.ui.settings.SettingsPanelWithData;
 import burp.auto.vader.ui.AutoVaderContextMenu;
+import burp.auto.vader.ui.AutoVaderTabProvider;
+
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,12 +18,14 @@ public class AutoVaderExtension implements BurpExtension
     public static String extensionName = "Auto Vader";
     public static SettingsPanelWithData settings;
     public static final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    public static DOMInvaderDataStore dataStore = new DOMInvaderDataStore();
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
         api.logging().logToOutput(extensionName + " v1.0.0");
         AutoVaderExtension.api = api;
         api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu());
+        api.userInterface().registerHttpRequestEditorProvider(new AutoVaderTabProvider());
         String domInvaderPath = Paths.get(
                 System.getProperty("user.home"),
                 ".BurpSuite",
