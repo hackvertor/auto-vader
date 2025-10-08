@@ -50,7 +50,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                   }
                 }
 
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile("")))
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile("burpdomxss")))
                     .renderUrls(urls, domInvaderPath, true, false);
                 api.logging().logToOutput("Rendered " + urls.size() + " URLs via Playwright");
               });

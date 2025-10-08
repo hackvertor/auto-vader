@@ -116,19 +116,23 @@ public class PlaywrightRenderer {
                 }
             }
 
-            Page page = ctx.newPage();
-
             for (String url : urls) {
+                Page testPage = ctx.newPage();
+                testPage.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                Thread.sleep(500);
+                testPage.close();
+                Thread.sleep(500);
+                Page page = ctx.newPage();
                 try {
                     ctx.exposeBinding("sendToBurp", (source, arguments) -> {
                         String frameUrl = source.frame().url();
                         if (!frameUrl.startsWith(url)) throw new RuntimeException("blocked");
-                        if (arguments.length != 2 || !(arguments[0] instanceof String payload)) throw new RuntimeException("bad args");
+                        if (arguments.length != 2) throw new RuntimeException("bad args");
                         String json = arguments[0].toString();
                         String type = arguments[1].toString();
                         api.logging().logToOutput("JSON:" + json);
                         api.logging().logToOutput("type:" + type);
-                        return "ack:" + payload;
+                        return "ack";
                     });
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
 

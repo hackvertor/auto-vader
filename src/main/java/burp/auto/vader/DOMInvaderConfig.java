@@ -3,6 +3,8 @@ package burp.auto.vader;
 import java.util.HashMap;
 import java.util.Map;
 
+import static burp.auto.vader.AutoVaderExtension.api;
+
 public class DOMInvaderConfig {
 
     private final String sinkCallback = """
