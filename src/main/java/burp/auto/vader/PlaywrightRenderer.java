@@ -121,9 +121,9 @@ public class PlaywrightRenderer {
             for (String url : urls) {
                 Page testPage = ctx.newPage();
                 testPage.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                Thread.sleep(500);
+                Thread.sleep(1500);
                 testPage.close();
-                Thread.sleep(500);
+                Thread.sleep(1500);
                 Page page = ctx.newPage();
                 try {
                     ctx.exposeBinding("sendToBurp", (source, arguments) -> {
@@ -148,7 +148,6 @@ public class PlaywrightRenderer {
                             null,
                             new Page.WaitForFunctionOptions().setPollingInterval(100).setTimeout(30000)
                     );
-                    Thread.sleep(50000);
                     api.logging().logToOutput("DOM Invader analysis complete for: " + url);
                 } catch (Throwable e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());
