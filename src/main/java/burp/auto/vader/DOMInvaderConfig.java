@@ -20,7 +20,7 @@ function(sinkDetails, sinks, interestingSinks) {
     };
 
     sendToBurp(payload,"sink");
-    return true; // return true to log sink
+    return false;
 }""";
 
     private final String sourceCallback = """
@@ -37,7 +37,7 @@ function(sourceDetails, sources) {
     };
 
     sendToBurp(payload, "source");
-    return true; // return true to log source
+    return false;
 }""";
 
     private final String messageCallback = """
@@ -76,7 +76,7 @@ function(msg) {
     };
 
     sendToBurp(payload, "message");
-    return true; // return true to log message
+    return false;
 }""";
 
     public static class Profile {
