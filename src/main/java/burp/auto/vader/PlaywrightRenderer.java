@@ -1,5 +1,6 @@
 package burp.auto.vader;
 
+import com.google.gson.Gson;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.WaitUntilState;
 
@@ -105,42 +106,36 @@ public class PlaywrightRenderer {
                     api.logging().logToError("Could not detect extension ID, extension features will not be configured");
                 }
             }
-
+            Page page = ctx.pages().getFirst();
+            page.onConsoleMessage(msg -> api.logging().logToOutput(msg.text()));
             if (extId != null) {
                 try {
-                    Page extPage = ctx.newPage();
-                    extPage.navigate("chrome-extension://" + extId + "/settings/settings.html");
-                    extPage.evaluate(domInvaderConfig.generateSettingsScript());
+                    page.navigate("chrome-extension://" + extId + "/settings/settings.html");
+                    page.evaluate(domInvaderConfig.generateSettingsScript());
                     api.logging().logToOutput("Configured extension settings");
-                    extPage.close();
                 } catch (Exception e) {
                     api.logging().logToError("Error configuring extension: " + e.getMessage());
                 }
             }
-
             for (String url : urls) {
-                Page testPage = ctx.newPage();
-                testPage.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                Thread.sleep(1500);
-                testPage.close();
-                Thread.sleep(1500);
-                Page page = ctx.newPage();
+                Thread.sleep(500);
                 try {
                     ctx.exposeBinding("sendToBurp", (source, arguments) -> {
                         String frameUrl = source.frame().url();
                         if (!frameUrl.startsWith(url)) throw new RuntimeException("blocked");
                         if (arguments.length != 2) throw new RuntimeException("bad args");
 
-                        // arguments[0] is a JSHandle - need to evaluate it as JSON
-                        String json = source.page().evaluate("(obj) => JSON.stringify(obj)", arguments[0]).toString();
+                        Gson gson = new Gson();
+                        String json = gson.toJson(arguments[0]);
                         String type = arguments[1].toString();
 
                         // Parse and store the message
-                        boolean success = messageParser.parseAndStore(json, type, url);
-
-                        return success ? "ack" : "error";
+                        messageParser.parseAndStore(json, type, url);
+                        return null;
                     });
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    Thread.sleep(500);
+                    page.reload();
                     // Wait for DOM Invader to complete
                     api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
                     page.waitForFunction(
