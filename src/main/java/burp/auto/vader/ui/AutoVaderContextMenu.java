@@ -58,8 +58,15 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                                 }
 
                                 api.logging().logToOutput("Scanning " + enumeratedUrls.size() + " parameter variations with canary: " + canary);
-
-                                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(canary)))
+                                DOMInvaderConfig.Profile profile = DOMInvaderConfig.customProfile(canary)
+                                                                        .setEnabled(true)
+                                                                        .setPostmessage(true)
+                                                                        .setSpoofOrigin(true)
+                                                                        .setInjectCanary(true)
+                                                                        .setDuplicateValues(true)
+                                                                        .setGuessStrings(true)
+                                                                        .setCrossDomainLeaks(true);
+                                new PlaywrightRenderer(new DOMInvaderConfig(profile))
                                         .renderUrls(enumeratedUrls, domInvaderPath, true, false);
                                 api.logging().logToOutput("Completed scanning " + enumeratedUrls.size() + " URLs via AutoVader");
                             });

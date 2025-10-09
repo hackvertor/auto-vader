@@ -49,6 +49,7 @@ public class Utils {
         int queryStart = url.indexOf('?');
         if (queryStart == -1) {
             // No query parameters
+            enumeratedUrls.add(url);
             return enumeratedUrls;
         }
 

@@ -78,6 +78,7 @@ function(msg) {
         framePathFrom: msg.framePathFrom,
         framePathTo: msg.framePathTo
     };
+    console.log(payload);
     if(payload.isInteresting) {
         sendToBurp(payload, "message");
     }
@@ -152,6 +153,21 @@ function(msg) {
 
         public Profile setFireEvents(boolean fireEvents) {
             this.fireEvents = fireEvents;
+            return this;
+        }
+
+        public Profile setSpoofOrigin(boolean spoofOrigin) {
+            this.spoofOrigin = spoofOrigin;
+            return this;
+        }
+
+        public Profile setDuplicateValues(boolean duplicateValues) {
+            this.duplicateValues = duplicateValues;
+            return this;
+        }
+
+        public Profile setGuessStrings(boolean guessStrings) {
+            this.guessStrings = guessStrings;
             return this;
         }
 
