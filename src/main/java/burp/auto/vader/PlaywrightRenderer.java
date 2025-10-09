@@ -128,7 +128,7 @@ public class PlaywrightRenderer {
                         Gson gson = new Gson();
                         String json = gson.toJson(arguments[0]);
                         String type = arguments[1].toString();
-
+                        api.logging().logToOutput("JSON:"+json);
                         // Parse and store the message
                         messageParser.parseAndStore(json, type, url);
                         return null;

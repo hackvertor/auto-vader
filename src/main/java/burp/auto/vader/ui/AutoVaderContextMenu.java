@@ -65,41 +65,6 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                             });
                 });
         menu.add(scanAllQueryParametersMenu);
-        JMenuItem getAllSinksMenu = new JMenuItem("Get all sinks");
-    getAllSinksMenu.addActionListener(
-        e -> {
-          AutoVaderExtension.executorService.submit(
-              () -> {
-                String domInvaderPath = settings.getString("DOM Invader path");
-
-                List<String> urls = null;
-
-                if (!event.selectedRequestResponses().isEmpty()) {
-                  urls =
-                      event.selectedRequestResponses().stream()
-                          .map(requestResponse -> requestResponse.request().url())
-                          .toList();
-                } else {
-                  if (event.messageEditorRequestResponse().isPresent()) {
-                    urls =
-                        Collections.singletonList(
-                            event
-                                .messageEditorRequestResponse()
-                                .get()
-                                .requestResponse()
-                                .request()
-                                .url());
-                  } else {
-                      return;
-                  }
-                }
-
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile("")))
-                    .renderUrls(urls, domInvaderPath, true, false);
-                api.logging().logToOutput("Got sinks for " + urls.size() + " URLs via AutoVader");
-              });
-        });
-        menu.add(getAllSinksMenu);
         menuItemList.add(menu);
         return menuItemList;
     }
