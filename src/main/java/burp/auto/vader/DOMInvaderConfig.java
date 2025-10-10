@@ -22,6 +22,7 @@ function(sinkDetails, sinks, interestingSinks) {
     };
     if(payload.isInteresting && payload.value.includes(payload.canary)) {
         sendToBurp(payload,"sink");
+        return true;
     }
     return false;
 }""";
@@ -40,6 +41,7 @@ function(sourceDetails, sources) {
     };
     if(payload.isInteresting) {
         sendToBurp(payload, "source");
+        return true;
     }
     return false;
 }""";
@@ -78,9 +80,10 @@ function(msg) {
         framePathFrom: msg.framePathFrom,
         framePathTo: msg.framePathTo
     };
-    console.log(payload);
+    
     if(payload.isInteresting) {
         sendToBurp(payload, "message");
+        return true;
     }
     return false;
 }""";

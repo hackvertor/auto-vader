@@ -47,7 +47,7 @@ public class PlaywrightRenderer {
         this.issueReporter = new DOMInvaderIssueReporter(api);
     }
 
-    public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless) {
+    public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
         Playwright playwright = null;
         BrowserContext ctx = null;
         try {
@@ -118,7 +118,6 @@ public class PlaywrightRenderer {
                 }
             }
             for (String url : urls) {
-                Thread.sleep(500);
                 try {
                     ctx.exposeBinding("sendToBurp", (source, arguments) -> {
                         String frameUrl = source.frame().url();
@@ -128,15 +127,16 @@ public class PlaywrightRenderer {
                         Gson gson = new Gson();
                         String json = gson.toJson(arguments[0]);
                         String type = arguments[1].toString();
-                        api.logging().logToOutput("JSON:"+json);
-                        // Report the finding as a Burp issue
-                        issueReporter.parseAndReport(json, type, url);
+                        if(shouldSendToBurp) {
+                            issueReporter.parseAndReport(json, type, url);
+                        }
                         return null;
                     });
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                    Thread.sleep(500);
-                    page.reload();
-                    // Wait for DOM Invader to complete
+                    boolean isDomInvaderEnabled = (Boolean) page.evaluate("() => { return typeof window.BurpDOMInvader !== 'undefined'; }");
+                    if(!isDomInvaderEnabled) {
+                        page.reload();
+                    }
                     api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
                     page.waitForFunction(
                             "() => window.BurpDOMInvader && window.BurpDOMInvader.isComplete",
