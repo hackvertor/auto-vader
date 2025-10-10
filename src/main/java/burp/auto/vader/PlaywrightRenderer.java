@@ -36,7 +36,7 @@ import static burp.auto.vader.AutoVaderExtension.*;
 public class PlaywrightRenderer {
 
     private final DOMInvaderConfig domInvaderConfig;
-    private final DOMInvaderMessageParser messageParser;
+    private final DOMInvaderIssueReporter issueReporter;
 
     public PlaywrightRenderer() {
         this(new DOMInvaderConfig());
@@ -44,7 +44,7 @@ public class PlaywrightRenderer {
 
     public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig) {
         this.domInvaderConfig = domInvaderConfig;
-        this.messageParser = new DOMInvaderMessageParser(AutoVaderExtension.dataStore);
+        this.issueReporter = new DOMInvaderIssueReporter(api);
     }
 
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless) {
@@ -129,8 +129,8 @@ public class PlaywrightRenderer {
                         String json = gson.toJson(arguments[0]);
                         String type = arguments[1].toString();
                         api.logging().logToOutput("JSON:"+json);
-                        // Parse and store the message
-                        messageParser.parseAndStore(json, type, url);
+                        // Report the finding as a Burp issue
+                        issueReporter.parseAndReport(json, type, url);
                         return null;
                     });
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));

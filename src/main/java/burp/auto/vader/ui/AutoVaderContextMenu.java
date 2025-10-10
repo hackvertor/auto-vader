@@ -17,62 +17,83 @@ import static burp.auto.vader.AutoVaderExtension.*;
 
 public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
+    private List<String> extractUrlsFromEvent(ContextMenuEvent event) {
+        if (!event.selectedRequestResponses().isEmpty()) {
+            return event.selectedRequestResponses().stream()
+                    .map(requestResponse -> requestResponse.request().url())
+                    .toList();
+        } else if (event.messageEditorRequestResponse().isPresent()) {
+            return Collections.singletonList(
+                    event.messageEditorRequestResponse()
+                            .get()
+                            .requestResponse()
+                            .request()
+                            .url());
+        }
+        return null;
+    }
+
+    private DOMInvaderConfig.Profile createScanProfile(String canary) {
+        return DOMInvaderConfig.customProfile(canary)
+                .setEnabled(true)
+                .setPostmessage(true)
+                .setSpoofOrigin(true)
+                .setInjectCanary(true)
+                .setDuplicateValues(true)
+                .setGuessStrings(true)
+                .setCrossDomainLeaks(true);
+    }
+
+    private void executeScan(ContextMenuEvent event, ScanProcessor scanProcessor) {
+        AutoVaderExtension.executorService.submit(() -> {
+            String domInvaderPath = settings.getString("DOM Invader path");
+            String canary = Utils.generateCanary();
+            List<String> urls = extractUrlsFromEvent(event);
+            
+            if (urls == null) {
+                return;
+            }
+            
+            List<String> urlsToScan = scanProcessor.processUrls(urls, canary);
+            if (urlsToScan.isEmpty()) {
+                api.logging().logToOutput("No URLs to scan");
+                return;
+            }
+            
+            api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
+            DOMInvaderConfig.Profile profile = createScanProfile(canary);
+            new PlaywrightRenderer(new DOMInvaderConfig(profile))
+                    .renderUrls(urlsToScan, domInvaderPath, true, false);
+            api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
+        });
+    }
+
+    private interface ScanProcessor {
+        List<String> processUrls(List<String> urls, String canary);
+    }
+
     public List<Component> provideMenuItems(ContextMenuEvent event) {
         List<Component> menuItemList = new ArrayList<>();
         JMenu menu = new JMenu("Auto Vader");
         JMenuItem scanAllQueryParametersMenu = new JMenuItem("Scan all query params");
-        scanAllQueryParametersMenu.addActionListener(
-                e -> {
-                    AutoVaderExtension.executorService.submit(
-                            () -> {
-                                String domInvaderPath = settings.getString("DOM Invader path");
-                                String canary = Utils.generateCanary();
-                                List<String> urls = null;
-
-                                if (!event.selectedRequestResponses().isEmpty()) {
-                                    urls =
-                                            event.selectedRequestResponses().stream()
-                                                    .map(requestResponse -> requestResponse.request().url())
-                                                    .toList();
-                                } else {
-                                    if (event.messageEditorRequestResponse().isPresent()) {
-                                        urls =
-                                                Collections.singletonList(
-                                                        event
-                                                                .messageEditorRequestResponse()
-                                                                .get()
-                                                                .requestResponse()
-                                                                .request()
-                                                                .url());
-                                    } else {
-                                        return;
-                                    }
-                                }
-
-                                // Enumerate query parameters and inject canary into each one
-                                List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary);
-                                api.logging().logToOutput("Urls:" + enumeratedUrls);
-                                if (enumeratedUrls.isEmpty()) {
-                                    api.logging().logToOutput("No query parameters found to scan");
-                                    return;
-                                }
-
-                                api.logging().logToOutput("Scanning " + enumeratedUrls.size() + " parameter variations with canary: " + canary);
-                                DOMInvaderConfig.Profile profile = DOMInvaderConfig.customProfile(canary)
-                                                                        .setEnabled(true)
-                                                                        .setPostmessage(true)
-                                                                        .setSpoofOrigin(true)
-                                                                        .setInjectCanary(true)
-                                                                        .setDuplicateValues(true)
-                                                                        .setGuessStrings(true)
-                                                                        .setCrossDomainLeaks(true);
-                                new PlaywrightRenderer(new DOMInvaderConfig(profile))
-                                        .renderUrls(enumeratedUrls, domInvaderPath, true, false);
-                                api.logging().logToOutput("Completed scanning " + enumeratedUrls.size() + " URLs via AutoVader");
-                            });
-                });
+        scanAllQueryParametersMenu.addActionListener(e -> 
+            executeScan(event, (urls, canary) -> {
+                List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary);
+                api.logging().logToOutput("Urls:" + enumeratedUrls);
+                if (enumeratedUrls.isEmpty()) {
+                    api.logging().logToOutput("No query parameters found to scan");
+                }
+                return enumeratedUrls;
+            })
+        );
         menu.add(scanAllQueryParametersMenu);
+        JMenuItem scanWebMessagesMenu = new JMenuItem("Scan web messages");
+        scanWebMessagesMenu.addActionListener(e -> 
+            executeScan(event, (urls, canary) -> urls)
+        );
+        menu.add(scanWebMessagesMenu);
         menuItemList.add(menu);
+
         return menuItemList;
     }
 }
