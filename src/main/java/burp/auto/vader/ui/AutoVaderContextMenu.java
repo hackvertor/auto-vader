@@ -17,6 +17,11 @@ import static burp.auto.vader.AutoVaderExtension.*;
 
 public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
+    private enum ScanType {
+        WEB_MESSAGE,
+        QUERY_PARAMS
+    }
+
     private List<String> extractUrlsFromEvent(ContextMenuEvent event) {
         if (!event.selectedRequestResponses().isEmpty()) {
             return event.selectedRequestResponses().stream()
@@ -33,35 +38,39 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         return null;
     }
 
-    private DOMInvaderConfig.Profile createScanProfile(String canary) {
-        return DOMInvaderConfig.customProfile(canary)
-                .setEnabled(true)
-                .setPostmessage(true)
-                .setSpoofOrigin(true)
-                .setInjectCanary(true)
-                .setDuplicateValues(true)
-                .setGuessStrings(true)
-                .setCrossDomainLeaks(true);
+    private DOMInvaderConfig.Profile createScanProfile(String canary, ScanType scanType) {
+        if (scanType == ScanType.WEB_MESSAGE) {
+            return DOMInvaderConfig.customProfile(canary)
+                    .setEnabled(true)
+                    .setPostmessage(true)
+                    .setSpoofOrigin(true)
+                    .setInjectCanary(true)
+                    .setDuplicateValues(true)
+                    .setGuessStrings(true)
+                    .setCrossDomainLeaks(true);
+        } else {
+            return DOMInvaderConfig.customProfile(canary);
+        }
     }
 
-    private void executeScan(ContextMenuEvent event, ScanProcessor scanProcessor) {
+    private void executeScan(ContextMenuEvent event, ScanProcessor scanProcessor, ScanType scanType) {
         AutoVaderExtension.executorService.submit(() -> {
             String domInvaderPath = settings.getString("DOM Invader path");
-            String canary = Utils.generateCanary();
+            String canary = projectCanary;
             List<String> urls = extractUrlsFromEvent(event);
-            
+
             if (urls == null) {
                 return;
             }
-            
+
             List<String> urlsToScan = scanProcessor.processUrls(urls, canary);
             if (urlsToScan.isEmpty()) {
                 api.logging().logToOutput("No URLs to scan");
                 return;
             }
-            
+
             api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
-            DOMInvaderConfig.Profile profile = createScanProfile(canary);
+            DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
             new PlaywrightRenderer(new DOMInvaderConfig(profile))
                     .renderUrls(urlsToScan, domInvaderPath, true, false);
             api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
@@ -75,8 +84,18 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     public List<Component> provideMenuItems(ContextMenuEvent event) {
         List<Component> menuItemList = new ArrayList<>();
         JMenu menu = new JMenu("Auto Vader");
+        JMenuItem openDomInvaderMenu = new JMenuItem("Open DOM Invader");
+        openDomInvaderMenu.setEnabled(event.messageEditorRequestResponse().isPresent());
+        openDomInvaderMenu.addActionListener(e -> {
+            executorService.submit(() -> {
+                String domInvaderPath = settings.getString("DOM Invader path");
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)))
+                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false);
+            });
+        });
+        menu.add(openDomInvaderMenu);
         JMenuItem scanAllQueryParametersMenu = new JMenuItem("Scan all query params");
-        scanAllQueryParametersMenu.addActionListener(e -> 
+        scanAllQueryParametersMenu.addActionListener(e ->
             executeScan(event, (urls, canary) -> {
                 List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary);
                 api.logging().logToOutput("Urls:" + enumeratedUrls);
@@ -84,12 +103,12 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                     api.logging().logToOutput("No query parameters found to scan");
                 }
                 return enumeratedUrls;
-            })
+            }, ScanType.QUERY_PARAMS)
         );
         menu.add(scanAllQueryParametersMenu);
         JMenuItem scanWebMessagesMenu = new JMenuItem("Scan web messages");
-        scanWebMessagesMenu.addActionListener(e -> 
-            executeScan(event, (urls, canary) -> urls)
+        scanWebMessagesMenu.addActionListener(e ->
+            executeScan(event, (urls, canary) -> urls, ScanType.WEB_MESSAGE)
         );
         menu.add(scanWebMessagesMenu);
         menuItemList.add(menu);

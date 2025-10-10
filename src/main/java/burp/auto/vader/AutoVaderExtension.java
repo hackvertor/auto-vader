@@ -17,11 +17,18 @@ public class AutoVaderExtension implements BurpExtension
     public static String extensionName = "Auto Vader";
     public static SettingsPanelWithData settings;
     public static final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    public static String projectCanary = null;
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
         api.logging().logToOutput(extensionName + " v1.0.0");
         AutoVaderExtension.api = api;
+        String canary = api.persistence().extensionData().getString("canary");
+        if(canary == null) {
+            canary = Utils.generateCanary();
+            api.persistence().extensionData().setString("canary", canary);
+        }
+        projectCanary = canary;
         api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu());
         String domInvaderPath = Paths.get(
                 System.getProperty("user.home"),
