@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 public class AutoVaderExtension implements BurpExtension
 {
     public static MontoyaApi api;
-    public static String extensionName = "Auto Vader";
+    public static String extensionName = "AutoVader";
     public static SettingsPanelWithData settings;
     public static final ExecutorService executorService = Executors.newSingleThreadExecutor();
     public static String projectCanary = null;
@@ -29,7 +29,7 @@ public class AutoVaderExtension implements BurpExtension
             api.persistence().extensionData().setString("canary", canary);
         }
         projectCanary = canary;
-        api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu());
+        api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu(new IssueDeduplicator(api)));
         String domInvaderPath = Paths.get(
                 System.getProperty("user.home"),
                 ".BurpSuite",
@@ -39,12 +39,12 @@ public class AutoVaderExtension implements BurpExtension
         String chromiumPath = PlaywrightRenderer.getBurpChromiumPath();
         settings = SettingsPanelBuilder.settingsPanel()
                 .withPersistence(SettingsPanelPersistence.USER_SETTINGS)
-                .withTitle("Auto Vader Settings")
+                .withTitle("AutoVader Settings")
                 .withDescription("""                       
                         Burp Chromium path - Is the path to where Burp browser is installed
                         DOM Invader path - The path where the DOM Invader extension is installed                      
                         """)
-                .withKeywords("DOM", "Invader", "Auto", "Vader")
+                .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
                 .withSettings(
                         SettingsPanelSetting.stringSetting("Burp Chromium path", chromiumPath),
                         SettingsPanelSetting.stringSetting("DOM Invader path", domInvaderPath)

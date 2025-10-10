@@ -2,10 +2,7 @@ package burp.auto.vader.ui;
 
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
-import burp.auto.vader.AutoVaderExtension;
-import burp.auto.vader.DOMInvaderConfig;
-import burp.auto.vader.PlaywrightRenderer;
-import burp.auto.vader.Utils;
+import burp.auto.vader.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -16,10 +13,14 @@ import java.util.List;
 import static burp.auto.vader.AutoVaderExtension.*;
 
 public class AutoVaderContextMenu implements ContextMenuItemsProvider {
-
+    private IssueDeduplicator deduper;
     private enum ScanType {
         WEB_MESSAGE,
         QUERY_PARAMS
+    }
+
+    public AutoVaderContextMenu(IssueDeduplicator deduper) {
+        this.deduper = deduper;
     }
 
     private List<String> extractUrlsFromEvent(ContextMenuEvent event) {
@@ -71,7 +72,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
             api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
             DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
-            new PlaywrightRenderer(new DOMInvaderConfig(profile))
+            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper)
                     .renderUrls(urlsToScan, domInvaderPath, true, false, true);
             api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
         });
@@ -83,13 +84,13 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
     public List<Component> provideMenuItems(ContextMenuEvent event) {
         List<Component> menuItemList = new ArrayList<>();
-        JMenu menu = new JMenu("Auto Vader");
+        JMenu menu = new JMenu(extensionName);
         JMenuItem openDomInvaderMenu = new JMenuItem("Open DOM Invader");
         openDomInvaderMenu.setEnabled(event.messageEditorRequestResponse().isPresent());
         openDomInvaderMenu.addActionListener(e -> {
             executorService.submit(() -> {
                 String domInvaderPath = settings.getString("DOM Invader path");
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)))
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)), deduper)
                         .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false);
             });
         });

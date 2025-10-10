@@ -12,6 +12,8 @@ import burp.auto.vader.model.SourceDetails;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
+import java.util.List;
+
 import static burp.auto.vader.AutoVaderExtension.api;
 
 /**
@@ -19,11 +21,13 @@ import static burp.auto.vader.AutoVaderExtension.api;
  */
 public class DOMInvaderIssueReporter {
 
+    private IssueDeduplicator deduper;
     private final Gson gson = new Gson();
     private final MontoyaApi montoyaApi;
 
-    public DOMInvaderIssueReporter(MontoyaApi api) {
+    public DOMInvaderIssueReporter(MontoyaApi api, IssueDeduplicator deduper) {
         this.montoyaApi = api;
+        this.deduper = deduper;
     }
 
     /**
@@ -40,19 +44,16 @@ public class DOMInvaderIssueReporter {
                 case "sink":
                     SinkDetails sink = gson.fromJson(json, SinkDetails.class);
                     reportSinkIssue(sink, url);
-                    api.logging().logToOutput("Reported sink issue for URL: " + url);
                     return true;
 
                 case "source":
                     SourceDetails source = gson.fromJson(json, SourceDetails.class);
                     reportSourceIssue(source, url);
-                    api.logging().logToOutput("Reported source issue for URL: " + url);
                     return true;
 
                 case "message":
                     MessageDetails message = gson.fromJson(json, MessageDetails.class);
                     reportMessageIssue(message, url);
-                    api.logging().logToOutput("Reported message issue for URL: " + url);
                     return true;
 
                 default:
@@ -199,7 +200,7 @@ public class DOMInvaderIssueReporter {
             requestResponse
         );
 
-        montoyaApi.siteMap().add(issue);
+        deduper.addIssueIfNew(issue);
     }
 
     private String escapeHtml(String text) {

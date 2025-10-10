@@ -37,14 +37,13 @@ public class PlaywrightRenderer {
 
     private final DOMInvaderConfig domInvaderConfig;
     private final DOMInvaderIssueReporter issueReporter;
-
-    public PlaywrightRenderer() {
-        this(new DOMInvaderConfig());
+    public PlaywrightRenderer( IssueDeduplicator dedupe) {
+        this(new DOMInvaderConfig(), dedupe);
     }
 
-    public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig) {
+    public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig, IssueDeduplicator deduper) {
         this.domInvaderConfig = domInvaderConfig;
-        this.issueReporter = new DOMInvaderIssueReporter(api);
+        this.issueReporter = new DOMInvaderIssueReporter(api, deduper);
     }
 
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
@@ -133,10 +132,7 @@ public class PlaywrightRenderer {
                         return null;
                     });
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                    boolean isDomInvaderEnabled = (Boolean) page.evaluate("() => { return typeof window.BurpDOMInvader !== 'undefined'; }");
-                    if(!isDomInvaderEnabled) {
-                        page.reload();
-                    }
+                    page.reload();
                     api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
                     page.waitForFunction(
                             "() => window.BurpDOMInvader && window.BurpDOMInvader.isComplete",
