@@ -182,7 +182,7 @@ public class DOMInvaderIssueReporter {
     private void createIssue(String name, String detail, String url, AuditIssueSeverity severity, AuditIssueConfidence confidence) {
         // Create a minimal HTTP request for the issue
         HttpRequestResponse requestResponse = HttpRequestResponse.httpRequestResponse(
-                HttpRequest.httpRequestFromUrl(url).withMethod("GET").withPath("/"),
+                HttpRequest.httpRequestFromUrl(url),
             null
         );
 
