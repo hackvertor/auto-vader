@@ -5,8 +5,6 @@ import burp.api.montoya.scanner.audit.issues.AuditIssue;
 import java.util.HashSet;
 import java.util.Set;
 
-import static burp.auto.vader.AutoVaderExtension.api;
-
 public class IssueDeduplicator {
     private final MontoyaApi api;
     private final Set<String> seenIssues = new HashSet<>();

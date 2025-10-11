@@ -55,7 +55,7 @@ function(msg) {
         title: msg.title,
         description: `Web message data is being sent via ${msg.description.originalOrigin} to origin ${msg.description.origin} from a postMessage request. ${msg.description.extra} This event listener ${msg.description.originCheckedFirst} check the origin before accessing data.`,
         url: msg.url,
-        charactersEncoded: `${msg.charactersEncoded.sinkInjection}`,
+        charactersEncoded: msg.charactersEncoded ? `${msg.charactersEncoded.sinkInjection}` : "",
         confidence: msg.confidence,
         dataAccessed: msg.dataAccessed,
         dataStackTrace: msg.dataStackTrace,
@@ -80,7 +80,6 @@ function(msg) {
         framePathFrom: msg.framePathFrom,
         framePathTo: msg.framePathTo
     };
-    
     if(payload.isInteresting) {
         sendToBurp(payload, "message");
         return true;
