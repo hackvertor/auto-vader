@@ -116,21 +116,23 @@ public class PlaywrightRenderer {
                     api.logging().logToError("Error configuring extension: " + e.getMessage());
                 }
             }
+
+            ctx.exposeBinding("sendToBurp", (source, arguments) -> {
+                String frameUrl = source.frame().url();
+                if (!urls.contains(frameUrl)) throw new RuntimeException("blocked");
+                if (arguments.length != 2) throw new RuntimeException("bad args");
+
+                Gson gson = new Gson();
+                String json = gson.toJson(arguments[0]);
+                String type = arguments[1].toString();
+                if(shouldSendToBurp) {
+                    issueReporter.parseAndReport(json, type, frameUrl);
+                }
+                return null;
+            });
+
             for (String url : urls) {
                 try {
-                    ctx.exposeBinding("sendToBurp", (source, arguments) -> {
-                        String frameUrl = source.frame().url();
-                        if (!frameUrl.startsWith(url)) throw new RuntimeException("blocked");
-                        if (arguments.length != 2) throw new RuntimeException("bad args");
-
-                        Gson gson = new Gson();
-                        String json = gson.toJson(arguments[0]);
-                        String type = arguments[1].toString();
-                        if(shouldSendToBurp) {
-                            issueReporter.parseAndReport(json, type, url);
-                        }
-                        return null;
-                    });
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
                     page.reload();
                     api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
