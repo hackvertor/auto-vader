@@ -4,6 +4,8 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
+import static burp.auto.vader.AutoVaderExtension.settings;
+
 public class Utils {
 
     private static final String LETTERS = "abcdefghijklmnopqrstuvwxyz";
@@ -42,7 +44,7 @@ public class Utils {
      * @param canary The canary value to inject
      * @return List of URLs with canary injected into each parameter
      */
-    public static List<String> enumerateQueryParameters(String url, String canary) {
+    public static List<String> enumerateQueryParameters(String url, String canary, String payload) {
         List<String> enumeratedUrls = new ArrayList<>();
 
         // Split URL into base and query string
@@ -86,10 +88,10 @@ public class Utils {
                     // Inject canary into this parameter
                     if (equalsIndex != -1) {
                         String paramName = param.substring(0, equalsIndex);
-                        newUrl.append(paramName).append("=").append(canary);
+                        newUrl.append(paramName).append("=").append(canary).append(payload);
                     } else {
                         // Parameter without value
-                        newUrl.append(param).append("=").append(canary);
+                        newUrl.append(param).append("=").append(canary).append(payload);
                     }
                 } else {
                     // Keep original parameter
@@ -111,11 +113,11 @@ public class Utils {
      * @param canary The canary value to inject
      * @return List of all enumerated URLs
      */
-    public static List<String> enumerateQueryParameters(List<String> urls, String canary) {
+    public static List<String> enumerateQueryParameters(List<String> urls, String canary, String payload) {
         List<String> allEnumeratedUrls = new ArrayList<>();
 
         for (String url : urls) {
-            List<String> enumerated = enumerateQueryParameters(url, canary);
+            List<String> enumerated = enumerateQueryParameters(url, canary, payload);
             allEnumeratedUrls.addAll(enumerated);
         }
 

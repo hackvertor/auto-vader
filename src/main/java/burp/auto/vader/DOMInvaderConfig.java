@@ -39,6 +39,7 @@ function(sourceDetails, sources) {
         framePath: sourceDetails.framePath,
         event: sourceDetails.event
     };
+   
     if(payload.isInteresting) {
         sendToBurp(payload, "source");
         return true;

@@ -119,12 +119,12 @@ public class PlaywrightRenderer {
 
             ctx.exposeBinding("sendToBurp", (source, arguments) -> {
                 String frameUrl = source.frame().url();
-                if (!urls.contains(frameUrl)) throw new RuntimeException("blocked");
                 if (arguments.length != 2) throw new RuntimeException("bad args");
 
                 Gson gson = new Gson();
                 String json = gson.toJson(arguments[0]);
                 String type = arguments[1].toString();
+                api.logging().logToOutput("JSON:" + json);
                 if(shouldSendToBurp) {
                     issueReporter.parseAndReport(json, type, frameUrl);
                 }

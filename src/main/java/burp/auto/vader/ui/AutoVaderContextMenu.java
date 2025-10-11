@@ -16,7 +16,8 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     private IssueDeduplicator deduper;
     private enum ScanType {
         WEB_MESSAGE,
-        QUERY_PARAMS
+        QUERY_PARAMS,
+        CLIENT_SIDE_PROTOTYPE_POLLUTION
     }
 
     public AutoVaderContextMenu(IssueDeduplicator deduper) {
@@ -49,6 +50,10 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                     .setDuplicateValues(true)
                     .setGuessStrings(true)
                     .setCrossDomainLeaks(true);
+        } else if(scanType == ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION) {
+            return DOMInvaderConfig.customProfile(canary)
+                    .setEnabled(true)
+                    .setPrototypePollution(true);
         } else {
             return DOMInvaderConfig.customProfile(canary);
         }
@@ -83,6 +88,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     }
 
     public List<Component> provideMenuItems(ContextMenuEvent event) {
+        String payload = settings.getString("payload");
         List<Component> menuItemList = new ArrayList<>();
         JMenu menu = new JMenu(extensionName);
         JMenuItem openDomInvaderMenu = new JMenuItem("Open DOM Invader");
@@ -98,7 +104,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         JMenuItem scanAllQueryParametersMenu = new JMenuItem("Scan all query params");
         scanAllQueryParametersMenu.addActionListener(e ->
             executeScan(event, (urls, canary) -> {
-                List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary);
+                List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary, payload);
                 api.logging().logToOutput("Urls:" + enumeratedUrls);
                 if (enumeratedUrls.isEmpty()) {
                     api.logging().logToOutput("No query parameters found to scan");
@@ -112,6 +118,11 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
             executeScan(event, (urls, canary) -> urls, ScanType.WEB_MESSAGE)
         );
         menu.add(scanWebMessagesMenu);
+        JMenuItem prototypePollutionMenu = new JMenuItem("Scan for client side prototype pollution");
+        prototypePollutionMenu.addActionListener(e ->
+                executeScan(event, (urls, canary) -> urls, ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION)
+        );
+        menu.add(prototypePollutionMenu);
         menuItemList.add(menu);
 
         return menuItemList;
