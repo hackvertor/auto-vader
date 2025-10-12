@@ -17,7 +17,8 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     private enum ScanType {
         WEB_MESSAGE,
         QUERY_PARAMS,
-        CLIENT_SIDE_PROTOTYPE_POLLUTION
+        CLIENT_SIDE_PROTOTYPE_POLLUTION,
+        CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS
     }
 
     public AutoVaderContextMenu(IssueDeduplicator deduper) {
@@ -54,6 +55,15 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
             return DOMInvaderConfig.customProfile(canary)
                     .setEnabled(true)
                     .setPrototypePollution(true);
+        } else if(scanType == ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS) {
+            return DOMInvaderConfig.customProfile(canary)
+                    .setEnabled(true)
+                    .setPrototypePollution(true)
+                    .setPrototypePollutionDiscoverProperties(true)
+                    .setPrototypePollutionAutoScale(true)
+                    .setPrototypePollutionNested(true)
+                    .setPrototypePollutionCSP(true)
+                    .setPrototypePollutionXFrameOptions(true);
         } else {
             return DOMInvaderConfig.customProfile(canary);
         }
@@ -123,6 +133,11 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                 executeScan(event, (urls, canary) -> urls, ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION)
         );
         menu.add(prototypePollutionMenu);
+        JMenuItem prototypePollutionGadgetsMenu = new JMenuItem("Scan for client side prototype pollution gadgets");
+        prototypePollutionGadgetsMenu.addActionListener(e ->
+                executeScan(event, (urls, canary) -> urls, ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS)
+        );
+        menu.add(prototypePollutionGadgetsMenu);
         menuItemList.add(menu);
 
         return menuItemList;

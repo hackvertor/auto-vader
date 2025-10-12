@@ -6,7 +6,9 @@ import com.microsoft.playwright.options.WaitUntilState;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static burp.auto.vader.AutoVaderExtension.*;
 
@@ -130,6 +132,15 @@ public class PlaywrightRenderer {
                 }
                 return null;
             });
+
+            if(settings.getBoolean("removeSecurityHeaders")) {
+                page.route("**/*", route -> {
+                    Map<String, String> headers = new HashMap<>(route.request().headers());
+                    headers.remove("X-Frame-Options");
+                    headers.remove("Content-Security-Policy");
+                    route.resume(new Route.ResumeOptions().setHeaders(headers));
+                });
+            }
 
             for (String url : urls) {
                 try {

@@ -174,6 +174,86 @@ function(msg) {
             return this;
         }
 
+        public Profile setDisabledSinks(String[] disabledSinks) {
+            this.disabledSinks = disabledSinks;
+            return this;
+        }
+
+        public Profile setFilterStack(boolean filterStack) {
+            this.filterStack = filterStack;
+            return this;
+        }
+
+        public Profile setInjectIntoSources(boolean injectIntoSources) {
+            this.injectIntoSources = injectIntoSources;
+            return this;
+        }
+
+        public Profile setPermissionsPolicy(boolean permissionsPolicy) {
+            this.permissionsPolicy = permissionsPolicy;
+            return this;
+        }
+
+        public Profile setPreventRedirection(boolean preventRedirection) {
+            this.preventRedirection = preventRedirection;
+            return this;
+        }
+
+        public Profile setPrototypePollutionAutoScale(boolean prototypePollutionAutoScale) {
+            this.prototypePollutionAutoScale = prototypePollutionAutoScale;
+            return this;
+        }
+
+        public Profile setPrototypePollutionCSP(boolean prototypePollutionCSP) {
+            this.prototypePollutionCSP = prototypePollutionCSP;
+            return this;
+        }
+
+        public Profile setPrototypePollutionDiscoverProperties(boolean prototypePollutionDiscoverProperties) {
+            this.prototypePollutionDiscoverProperties = prototypePollutionDiscoverProperties;
+            return this;
+        }
+
+        public Profile setPrototypePollutionHash(boolean prototypePollutionHash) {
+            this.prototypePollutionHash = prototypePollutionHash;
+            return this;
+        }
+
+        public Profile setPrototypePollutionJson(boolean prototypePollutionJson) {
+            this.prototypePollutionJson = prototypePollutionJson;
+            return this;
+        }
+
+        public Profile setPrototypePollutionNested(boolean prototypePollutionNested) {
+            this.prototypePollutionNested = prototypePollutionNested;
+            return this;
+        }
+
+        public Profile setPrototypePollutionQueryString(boolean prototypePollutionQueryString) {
+            this.prototypePollutionQueryString = prototypePollutionQueryString;
+            return this;
+        }
+
+        public Profile setPrototypePollutionSeparateFrame(boolean prototypePollutionSeparateFrame) {
+            this.prototypePollutionSeparateFrame = prototypePollutionSeparateFrame;
+            return this;
+        }
+
+        public Profile setPrototypePollutionVerify(boolean prototypePollutionVerify) {
+            this.prototypePollutionVerify = prototypePollutionVerify;
+            return this;
+        }
+
+        public Profile setPrototypePollutionXFrameOptions(boolean prototypePollutionXFrameOptions) {
+            this.prototypePollutionXFrameOptions = prototypePollutionXFrameOptions;
+            return this;
+        }
+
+        public Profile setRedirectBreakpoint(boolean redirectBreakpoint) {
+            this.redirectBreakpoint = redirectBreakpoint;
+            return this;
+        }
+
         public Map<String, Object> toMap() {
             Map<String, Object> settings = new HashMap<>();
             settings.put("canary", canary);
