@@ -54,7 +54,16 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         } else if(scanType == ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION) {
             return DOMInvaderConfig.customProfile(canary)
                     .setEnabled(true)
-                    .setPrototypePollution(true);
+                    .setPrototypePollution(true)
+                    .setPrototypePollutionAutoScale(true)
+                    .setPrototypePollutionNested(true)
+                    .setPrototypePollutionQueryString(true)
+                    .setPrototypePollutionHash(true)
+                    .setPrototypePollutionJson(true)
+                    .setPrototypePollutionVerify(true)
+                    .setPrototypePollutionCSP(false)
+                    .setPrototypePollutionXFrameOptions(false)
+                    .setPrototypePollutionSeparateFrame(false);
         } else if(scanType == ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS) {
             return DOMInvaderConfig.customProfile(canary)
                     .setEnabled(true)
@@ -62,8 +71,13 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                     .setPrototypePollutionDiscoverProperties(true)
                     .setPrototypePollutionAutoScale(true)
                     .setPrototypePollutionNested(true)
+                    .setPrototypePollutionQueryString(false)
+                    .setPrototypePollutionHash(false)
+                    .setPrototypePollutionJson(false)
+                    .setPrototypePollutionVerify(false)
                     .setPrototypePollutionCSP(true)
-                    .setPrototypePollutionXFrameOptions(true);
+                    .setPrototypePollutionXFrameOptions(true)
+                    .setPrototypePollutionSeparateFrame(false);
         } else {
             return DOMInvaderConfig.customProfile(canary);
         }
