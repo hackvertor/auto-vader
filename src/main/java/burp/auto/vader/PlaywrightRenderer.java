@@ -6,6 +6,7 @@ import com.microsoft.playwright.options.WaitUntilState;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,16 +37,17 @@ import static burp.auto.vader.AutoVaderExtension.*;
  * </pre>
  */
 public class PlaywrightRenderer {
-
+    private boolean shouldOpenDevtools = false;
     private final DOMInvaderConfig domInvaderConfig;
     private final DOMInvaderIssueReporter issueReporter;
-    public PlaywrightRenderer( IssueDeduplicator dedupe) {
-        this(new DOMInvaderConfig(), dedupe);
+    public PlaywrightRenderer( IssueDeduplicator dedupe, boolean shouldOpenDevtools) {
+        this(new DOMInvaderConfig(), dedupe, shouldOpenDevtools);
     }
 
-    public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig, IssueDeduplicator deduper) {
+    public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig, IssueDeduplicator deduper, boolean shouldOpenDevtools) {
         this.domInvaderConfig = domInvaderConfig;
         this.issueReporter = new DOMInvaderIssueReporter(api, deduper);
+        this.shouldOpenDevtools = shouldOpenDevtools;
     }
 
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
@@ -72,25 +74,26 @@ public class PlaywrightRenderer {
             String userDataDir = new File(autoVaderDir, "browser-profile").getAbsolutePath();
 
             if (extensionPath != null && !extensionPath.isEmpty()) {
-                launchOptions.setArgs(java.util.Arrays.asList(
-                        "--disable-extensions-except=" + extensionPath,
-                        "--load-extension=" + extensionPath,
-                        "--auto-open-devtools-for-tabs"
-                )).setHeadless(headless);
+                List<String> args = new ArrayList<>();
+                args.add("--disable-extensions-except=" + extensionPath);
+                args.add("--load-extension=" + extensionPath);
+                if (shouldOpenDevtools) {
+                    args.add("--auto-open-devtools-for-tabs");
+                }
+                launchOptions.setArgs(args).setHeadless(headless);
             } else {
                 launchOptions.setHeadless(headless);
             }
 
             ctx = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
             String extId = null;
-
+            Page page = ctx.pages().getFirst();
             if (extensionPath != null && !extensionPath.isEmpty()) {
                 try {
-                    Page tempPage = ctx.newPage();
                     try {
-                        tempPage.navigate("chrome://extensions");
-                        tempPage.click("cr-toggle#devMode");
-                        Locator extensionCard = tempPage.locator("extensions-item").first();
+                        page.navigate("chrome://extensions");
+                        page.click("cr-toggle#devMode");
+                        Locator extensionCard = page.locator("extensions-item").first();
                         extId = extensionCard.getAttribute("id");
 
                         if (extId != null) {
@@ -99,7 +102,6 @@ public class PlaywrightRenderer {
                     } catch (Exception e) {
                         api.logging().logToOutput("Could not access chrome://extensions: " + e.getMessage());
                     }
-                    tempPage.close();
                 } catch (Exception e) {
                     api.logging().logToOutput("Error detecting extension ID: " + e.getMessage());
                 }
@@ -108,7 +110,6 @@ public class PlaywrightRenderer {
                     api.logging().logToError("Could not detect extension ID, extension features will not be configured");
                 }
             }
-            Page page = ctx.pages().getFirst();
             page.onConsoleMessage(msg -> api.logging().logToOutput(msg.text()));
             if (extId != null) {
                 try {
@@ -127,14 +128,14 @@ public class PlaywrightRenderer {
                 Gson gson = new Gson();
                 String json = gson.toJson(arguments[0]);
                 String type = arguments[1].toString();
-                api.logging().logToOutput("JSON:" + json);
+
                 if(shouldSendToBurp) {
                     issueReporter.parseAndReport(json, type, frameUrl);
                 }
                 return null;
             });
 
-            if(settings.getBoolean("removeSecurityHeaders")) {
+            if(settings.getBoolean("Remove security headers")) {
                 page.route("**/*", route -> {
                     Map<String, String> headers = new HashMap<>(route.request().headers());
                     headers.remove("X-Frame-Options");

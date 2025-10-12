@@ -101,7 +101,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
             api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
             DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
-            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper)
+            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
                     .renderUrls(urlsToScan, domInvaderPath, true, false, true);
             api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
         });
@@ -112,7 +112,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     }
 
     public List<Component> provideMenuItems(ContextMenuEvent event) {
-        String payload = settings.getString("payload");
+        String payload = settings.getString("Payload");
         List<Component> menuItemList = new ArrayList<>();
         JMenu menu = new JMenu(extensionName);
         JMenuItem openDomInvaderMenu = new JMenuItem("Open DOM Invader");
@@ -120,7 +120,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         openDomInvaderMenu.addActionListener(e -> {
             executorService.submit(() -> {
                 String domInvaderPath = settings.getString("DOM Invader path");
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)), deduper)
+                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)), deduper, true)
                         .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false);
             });
         });
@@ -159,7 +159,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                 String domInvaderPath = settings.getString("DOM Invader path");
                 DOMInvaderConfig.Profile profile = DOMInvaderConfig.customProfile(projectCanary);
                 profile.setRedirectBreakpoint(true);
-                new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper)
+                new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, true)
                         .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false);
             });
         });

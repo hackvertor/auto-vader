@@ -50,8 +50,8 @@ public class AutoVaderExtension implements BurpExtension
                 .withSettings(
                         SettingsPanelSetting.stringSetting("Burp Chromium path", chromiumPath),
                         SettingsPanelSetting.stringSetting("DOM Invader path", domInvaderPath),
-                        SettingsPanelSetting.stringSetting("payload", ""),
-                        SettingsPanelSetting.booleanSetting("removeSecurityHeaders", true)
+                        SettingsPanelSetting.stringSetting("Payload", ""),
+                        SettingsPanelSetting.booleanSetting("Remove security headers", true)
                 )
                 .build();
         api.userInterface().registerSettingsPanel(settings);
