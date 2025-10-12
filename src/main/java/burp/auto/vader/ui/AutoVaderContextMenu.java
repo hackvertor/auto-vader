@@ -152,8 +152,19 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                 executeScan(event, (urls, canary) -> urls, ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS)
         );
         menu.add(prototypePollutionGadgetsMenu);
+        JMenuItem redirectBreakpointMenu = new JMenuItem("Intercept client side redirect");
+        redirectBreakpointMenu.setEnabled(event.messageEditorRequestResponse().isPresent());
+        redirectBreakpointMenu.addActionListener(e -> {
+            executorService.submit(() -> {
+                String domInvaderPath = settings.getString("DOM Invader path");
+                DOMInvaderConfig.Profile profile = DOMInvaderConfig.customProfile(projectCanary);
+                profile.setRedirectBreakpoint(true);
+                new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper)
+                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false);
+            });
+        });
+        menu.add(redirectBreakpointMenu);
         menuItemList.add(menu);
-
         return menuItemList;
     }
 }

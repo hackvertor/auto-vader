@@ -74,7 +74,8 @@ public class PlaywrightRenderer {
             if (extensionPath != null && !extensionPath.isEmpty()) {
                 launchOptions.setArgs(java.util.Arrays.asList(
                         "--disable-extensions-except=" + extensionPath,
-                        "--load-extension=" + extensionPath
+                        "--load-extension=" + extensionPath,
+                        "--auto-open-devtools-for-tabs"
                 )).setHeadless(headless);
             } else {
                 launchOptions.setHeadless(headless);
