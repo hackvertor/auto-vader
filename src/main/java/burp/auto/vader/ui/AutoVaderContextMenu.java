@@ -18,7 +18,9 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         WEB_MESSAGE,
         QUERY_PARAMS,
         CLIENT_SIDE_PROTOTYPE_POLLUTION,
-        CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS
+        CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS,
+        INJECT_INTO_ALL_SOURCES,
+        INJECT_INTO_ALL_SOURCES_AND_CLICK
     }
 
     public AutoVaderContextMenu(IssueDeduplicator deduper) {
@@ -51,6 +53,15 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                     .setDuplicateValues(true)
                     .setGuessStrings(true)
                     .setCrossDomainLeaks(true);
+        } else if(scanType == ScanType.INJECT_INTO_ALL_SOURCES) {
+            return DOMInvaderConfig.customProfile(canary)
+                    .setEnabled(true)
+                    .setInjectIntoSources(true);
+        } else if(scanType == ScanType.INJECT_INTO_ALL_SOURCES_AND_CLICK) {
+            return DOMInvaderConfig.customProfile(canary)
+                    .setEnabled(true)
+                    .setInjectIntoSources(true)
+                    .setFireEvents(true);
         } else if(scanType == ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION) {
             return DOMInvaderConfig.customProfile(canary)
                     .setEnabled(true)
@@ -142,6 +153,16 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
             executeScan(event, (urls, canary) -> urls, ScanType.WEB_MESSAGE)
         );
         menu.add(scanWebMessagesMenu);
+        JMenuItem injectIntoAllSourcesMenu = new JMenuItem("Inject into all sources");
+        injectIntoAllSourcesMenu.addActionListener(e ->
+                executeScan(event, (urls, canary) -> urls, ScanType.INJECT_INTO_ALL_SOURCES)
+        );
+        menu.add(injectIntoAllSourcesMenu);
+        JMenuItem injectIntoAllSourcesAndClickMenu = new JMenuItem("Inject into all sources & click everything");
+        injectIntoAllSourcesAndClickMenu.addActionListener(e ->
+                executeScan(event, (urls, canary) -> urls, ScanType.INJECT_INTO_ALL_SOURCES_AND_CLICK)
+        );
+        menu.add(injectIntoAllSourcesAndClickMenu);
         JMenuItem prototypePollutionMenu = new JMenuItem("Scan for client side prototype pollution");
         prototypePollutionMenu.addActionListener(e ->
                 executeScan(event, (urls, canary) -> urls, ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION)
