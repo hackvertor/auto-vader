@@ -85,7 +85,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
     private void executeScan(ContextMenuEvent event, ScanProcessor scanProcessor, ScanType scanType) {
         AutoVaderExtension.executorService.submit(() -> {
-            String domInvaderPath = settings.getString("DOM Invader path");
+            String domInvaderPath = AutoVaderExtension.domInvaderPath;
             String canary = projectCanary;
             List<String> urls = extractUrlsFromEvent(event);
 
@@ -119,7 +119,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         openDomInvaderMenu.setEnabled(event.messageEditorRequestResponse().isPresent());
         openDomInvaderMenu.addActionListener(e -> {
             executorService.submit(() -> {
-                String domInvaderPath = settings.getString("DOM Invader path");
+                String domInvaderPath = AutoVaderExtension.domInvaderPath;
                 new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)), deduper, true)
                         .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false);
             });
@@ -156,7 +156,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         redirectBreakpointMenu.setEnabled(event.messageEditorRequestResponse().isPresent());
         redirectBreakpointMenu.addActionListener(e -> {
             executorService.submit(() -> {
-                String domInvaderPath = settings.getString("DOM Invader path");
+                String domInvaderPath = AutoVaderExtension.domInvaderPath;
                 DOMInvaderConfig.Profile profile = DOMInvaderConfig.customProfile(projectCanary);
                 profile.setRedirectBreakpoint(true);
                 new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, true)

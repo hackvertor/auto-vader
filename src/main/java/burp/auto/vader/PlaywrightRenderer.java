@@ -63,7 +63,7 @@ public class PlaywrightRenderer {
 
             playwright = Playwright.create();
             BrowserType.LaunchPersistentContextOptions launchOptions = new BrowserType.LaunchPersistentContextOptions();
-            String chromiumPath = settings.getString("Burp Chromium path");
+            String chromiumPath = AutoVaderExtension.chromiumPath;
             if (!chromiumPath.isEmpty()) {
                 launchOptions.setExecutablePath(Paths.get(chromiumPath));
                 api.logging().logToOutput("Using Burp Chromium at: " + chromiumPath);
@@ -155,7 +155,7 @@ public class PlaywrightRenderer {
             for (String url : urls) {
                 try {
                     page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                    page.reload();
+                    page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
                     api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
                     page.waitForFunction(
                             "() => window.BurpDOMInvader && window.BurpDOMInvader.isComplete",

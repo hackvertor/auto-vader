@@ -7,6 +7,7 @@ import burp.api.montoya.ui.settings.SettingsPanelSetting;
 import burp.api.montoya.ui.settings.SettingsPanelWithData;
 import burp.auto.vader.ui.AutoVaderContextMenu;
 
+import java.io.File;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,6 +19,8 @@ public class AutoVaderExtension implements BurpExtension
     public static SettingsPanelWithData settings;
     public static final ExecutorService executorService = Executors.newSingleThreadExecutor();
     public static String projectCanary = null;
+    public static String domInvaderPath;
+    public static String chromiumPath;
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
@@ -30,26 +33,22 @@ public class AutoVaderExtension implements BurpExtension
         }
         projectCanary = canary;
         api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu(new IssueDeduplicator(api)));
-        String domInvaderPath = Paths.get(
+        AutoVaderExtension.domInvaderPath = Paths.get(
                 System.getProperty("user.home"),
                 ".BurpSuite",
                 "burp-chromium-extension",
                 "dom-invader-extension"
         ).toString();
-        String chromiumPath = PlaywrightRenderer.getBurpChromiumPath();
+        AutoVaderExtension.chromiumPath = PlaywrightRenderer.getBurpChromiumPath();
         settings = SettingsPanelBuilder.settingsPanel()
                 .withPersistence(SettingsPanelPersistence.USER_SETTINGS)
                 .withTitle("AutoVader Settings")
-                .withDescription("""                       
-                        Burp Chromium path - Is the path to where Burp browser is installed
-                        DOM Invader path - The path where the DOM Invader extension is installed 
+                .withDescription("""                                               
                         Payload - The payload to send along with the canary when scanning query parameters
                         Remove CSP - CSP can break the callbacks that DOM Invader uses to function                     
                         """)
                 .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
                 .withSettings(
-                        SettingsPanelSetting.stringSetting("Burp Chromium path", chromiumPath),
-                        SettingsPanelSetting.stringSetting("DOM Invader path", domInvaderPath),
                         SettingsPanelSetting.stringSetting("Payload", ""),
                         SettingsPanelSetting.booleanSetting("Remove CSP", true)
                 )
