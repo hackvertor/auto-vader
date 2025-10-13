@@ -135,12 +135,20 @@ public class PlaywrightRenderer {
                 return null;
             });
 
-            if(settings.getBoolean("Remove security headers")) {
+            if(settings.getBoolean("Remove CSP")) {
                 page.route("**/*", route -> {
-                    Map<String, String> headers = new HashMap<>(route.request().headers());
-                    headers.remove("X-Frame-Options");
-                    headers.remove("Content-Security-Policy");
-                    route.resume(new Route.ResumeOptions().setHeaders(headers));
+                    var response = route.fetch();
+
+                    Map<String, String> headers = new HashMap<>(response.headers());
+
+                    headers.entrySet().removeIf(entry -> {
+                        String key = entry.getKey().toLowerCase();
+                        return key.equals("content-security-policy");
+                    });
+
+                    route.fulfill(new Route.FulfillOptions()
+                            .setResponse(response)
+                            .setHeaders(headers));
                 });
             }
 

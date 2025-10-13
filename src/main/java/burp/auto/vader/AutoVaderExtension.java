@@ -44,14 +44,14 @@ public class AutoVaderExtension implements BurpExtension
                         Burp Chromium path - Is the path to where Burp browser is installed
                         DOM Invader path - The path where the DOM Invader extension is installed 
                         Payload - The payload to send along with the canary when scanning query parameters
-                        Remove security headers - Removes CSP and X-Frame-Options required in order for DOM Invader to function                     
+                        Remove CSP - CSP can break the callbacks that DOM Invader uses to function                     
                         """)
                 .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
                 .withSettings(
                         SettingsPanelSetting.stringSetting("Burp Chromium path", chromiumPath),
                         SettingsPanelSetting.stringSetting("DOM Invader path", domInvaderPath),
                         SettingsPanelSetting.stringSetting("Payload", ""),
-                        SettingsPanelSetting.booleanSetting("Remove security headers", true)
+                        SettingsPanelSetting.booleanSetting("Remove CSP", true)
                 )
                 .build();
         api.userInterface().registerSettingsPanel(settings);
