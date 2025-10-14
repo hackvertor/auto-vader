@@ -24,10 +24,19 @@ public class DOMInvaderIssueReporter {
     private IssueDeduplicator deduper;
     private final Gson gson = new Gson();
     private final MontoyaApi montoyaApi;
+    private HttpRequest request;
 
     public DOMInvaderIssueReporter(MontoyaApi api, IssueDeduplicator deduper) {
         this.montoyaApi = api;
         this.deduper = deduper;
+    }
+
+    public HttpRequest getRequest() {
+        return request;
+    }
+
+    public void setRequest(HttpRequest request) {
+        this.request = request;
     }
 
     /**
@@ -35,25 +44,25 @@ public class DOMInvaderIssueReporter {
      *
      * @param json The JSON string containing the message data
      * @param type The type of message: "sink", "source", or "message"
-     * @param url The URL from which the message originated
+     * @param request The Http request from which the message originated
      * @return true if parsing and reporting succeeded, false otherwise
      */
-    public boolean parseAndReport(String json, String type, String url) {
+    public boolean parseAndReport(String json, String type, HttpRequest request) {
         try {
             switch (type.toLowerCase()) {
                 case "sink":
                     SinkDetails sink = gson.fromJson(json, SinkDetails.class);
-                    reportSinkIssue(sink, url);
+                    reportSinkIssue(sink, request);
                     return true;
 
                 case "source":
                     SourceDetails source = gson.fromJson(json, SourceDetails.class);
-                    reportSourceIssue(source, url);
+                    reportSourceIssue(source, request);
                     return true;
 
                 case "message":
                     MessageDetails message = gson.fromJson(json, MessageDetails.class);
-                    reportMessageIssue(message, url);
+                    reportMessageIssue(message, request);
                     return true;
 
                 default:
@@ -69,7 +78,7 @@ public class DOMInvaderIssueReporter {
         }
     }
 
-    private void reportSinkIssue(SinkDetails sink, String url) {
+    private void reportSinkIssue(SinkDetails sink, HttpRequest request) {
         String issueName = "DOM XSS Sink: " + sink.getSink();
         
         StringBuilder detail = new StringBuilder();
@@ -86,10 +95,10 @@ public class DOMInvaderIssueReporter {
             detail.append("<p><b>Outer HTML:</b><pre>").append(escapeHtml(sink.getOuterHTML())).append("</pre></p>");
         }
 
-        createIssue(issueName, detail.toString(), url, AuditIssueSeverity.INFORMATION, AuditIssueConfidence.CERTAIN);
+        createIssue(issueName, detail.toString(), request, AuditIssueSeverity.INFORMATION, AuditIssueConfidence.CERTAIN);
     }
 
-    private void reportSourceIssue(SourceDetails source, String url) {
+    private void reportSourceIssue(SourceDetails source, HttpRequest request) {
         String issueName = "DOM XSS Source: " + source.getSource();
         
         StringBuilder detail = new StringBuilder();
@@ -102,10 +111,10 @@ public class DOMInvaderIssueReporter {
             detail.append("<p><b>Stack Trace:</b><pre>").append(escapeHtml(source.getStackTrace())).append("</pre></p>");
         }
 
-        createIssue(issueName, detail.toString(), url, AuditIssueSeverity.INFORMATION, AuditIssueConfidence.CERTAIN);
+        createIssue(issueName, detail.toString(), request, AuditIssueSeverity.INFORMATION, AuditIssueConfidence.CERTAIN);
     }
 
-    private void reportMessageIssue(MessageDetails message, String url) {
+    private void reportMessageIssue(MessageDetails message, HttpRequest request) {
         String issueName = message.getTitle() != null ? message.getTitle() : "PostMessage Vulnerability";
         
         StringBuilder detail = new StringBuilder();
@@ -140,7 +149,7 @@ public class DOMInvaderIssueReporter {
         AuditIssueSeverity severity = mapSeverity(message.getSeverity());
         AuditIssueConfidence confidence = mapConfidence(message.getConfidence());
 
-        createIssue(issueName, detail.toString(), url, severity, confidence);
+        createIssue(issueName, detail.toString(), request, severity, confidence);
     }
 
     private AuditIssueSeverity mapSeverity(String severity) {
@@ -180,10 +189,10 @@ public class DOMInvaderIssueReporter {
         }
     }
 
-    private void createIssue(String name, String detail, String url, AuditIssueSeverity severity, AuditIssueConfidence confidence) {
+    private void createIssue(String name, String detail, HttpRequest request, AuditIssueSeverity severity, AuditIssueConfidence confidence) {
         // Create a minimal HTTP request for the issue
         HttpRequestResponse requestResponse = HttpRequestResponse.httpRequestResponse(
-                HttpRequest.httpRequestFromUrl(url),
+                request,
             null
         );
 
@@ -191,7 +200,7 @@ public class DOMInvaderIssueReporter {
             name,
             detail,
             null, // No remediation detail
-            url,
+            request.url(),
             severity,
             confidence,
             null, // No background

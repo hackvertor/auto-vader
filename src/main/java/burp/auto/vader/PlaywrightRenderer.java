@@ -9,10 +9,7 @@ import com.microsoft.playwright.options.WaitUntilState;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static burp.auto.vader.AutoVaderExtension.*;
 
@@ -42,15 +39,15 @@ import static burp.auto.vader.AutoVaderExtension.*;
 public class PlaywrightRenderer {
     private boolean shouldOpenDevtools = false;
     private final DOMInvaderConfig domInvaderConfig;
-    private final DOMInvaderIssueReporter issueReporter;
+    private IssueDeduplicator issueDeduplicator;
     public PlaywrightRenderer( IssueDeduplicator dedupe, boolean shouldOpenDevtools) {
         this(new DOMInvaderConfig(), dedupe, shouldOpenDevtools);
     }
 
     public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig, IssueDeduplicator deduper, boolean shouldOpenDevtools) {
         this.domInvaderConfig = domInvaderConfig;
-        this.issueReporter = new DOMInvaderIssueReporter(api, deduper);
         this.shouldOpenDevtools = shouldOpenDevtools;
+        this.issueDeduplicator = deduper;
     }
 
     private static class BrowserSession {
@@ -65,7 +62,7 @@ public class PlaywrightRenderer {
         }
     }
 
-    private BrowserSession initializeBrowser(String extensionPath, boolean headless, boolean shouldSendToBurp) throws Exception {
+    private BrowserSession initializeBrowser(String extensionPath, boolean headless, boolean shouldSendToBurp, DOMInvaderIssueReporter issueReporter) throws Exception {
         String homeDir = System.getProperty("user.home");
         File autoVaderDir = new File(homeDir, ".AutoVader");
         if (!autoVaderDir.exists()) {
@@ -128,7 +125,7 @@ public class PlaywrightRenderer {
             String type = arguments[1].toString();
 
             if(shouldSendToBurp) {
-                issueReporter.parseAndReport(json, type, frameUrl);
+                issueReporter.parseAndReport(json, type, issueReporter.getRequest());
             }
             return null;
         });
@@ -201,10 +198,12 @@ public class PlaywrightRenderer {
     public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
         BrowserSession session = null;
         try {
-            session = initializeBrowser(extensionPath, headless, shouldSendToBurp);
+            DOMInvaderIssueReporter issueReporter = new DOMInvaderIssueReporter(api, issueDeduplicator);
+            session = initializeBrowser(extensionPath, headless, shouldSendToBurp, issueReporter);
 
             for (String url : urls) {
                 try {
+                    issueReporter.setRequest(HttpRequest.httpRequestFromUrl(url));
                     //horrible hack because for some reason DOM Invader settings are not synchronised on the first request
                     session.page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
                     session.page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
@@ -234,10 +233,12 @@ public class PlaywrightRenderer {
     public void renderHttpRequests(List<HttpRequest> requests, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
         BrowserSession session = null;
         try {
-            session = initializeBrowser(extensionPath, headless, shouldSendToBurp);
+            DOMInvaderIssueReporter issueReporter = new DOMInvaderIssueReporter(api, issueDeduplicator);
+            session = initializeBrowser(extensionPath, headless, shouldSendToBurp, issueReporter);
 
             // Process each HttpRequest
             for (HttpRequest burpReq : requests) {
+                issueReporter.setRequest(burpReq);
                 try {
                     String url = burpReq.url();
                     String method = burpReq.method();
