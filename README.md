@@ -1,3 +1,5 @@
+![](https://github.com/hackvertor/auto-vader/blob/main/src/main/resources/images/logo.png)
+
 # AutoVader
 
 AutoVader is a Burp Suite extension that integrates DOM Invader with Playwright Java to automatically find DOM-based vulnerabilities in web applications. It provides automated scanning capabilities through context menu actions, allowing security testers to quickly identify client-side security issues without manual DOM Invader interaction.
