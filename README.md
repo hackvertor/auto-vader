@@ -49,7 +49,6 @@ AutoVader adds a context menu to Burp Suite with multiple scanning options. Righ
 
 **Scan for client side prototype pollution gadgets**
 - Discovers exploitable gadgets for prototype pollution
-- Tests with CSP and X-Frame-Options bypass techniques
 - Identifies dangerous property assignments
 
 **Intercept client side redirect**
