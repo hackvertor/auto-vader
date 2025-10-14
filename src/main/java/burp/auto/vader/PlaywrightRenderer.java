@@ -1,7 +1,10 @@
 package burp.auto.vader;
 
+import burp.api.montoya.http.message.HttpHeader;
+import burp.api.montoya.http.message.requests.HttpRequest;
 import com.google.gson.Gson;
 import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.RequestOptions;
 import com.microsoft.playwright.options.WaitUntilState;
 
 import java.io.File;
@@ -50,135 +53,249 @@ public class PlaywrightRenderer {
         this.shouldOpenDevtools = shouldOpenDevtools;
     }
 
-    public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
-        Playwright playwright = null;
-        BrowserContext ctx = null;
-        try {
-            String homeDir = System.getProperty("user.home");
-            File autoVaderDir = new File(homeDir, ".AutoVader");
-            if (!autoVaderDir.exists()) {
-                autoVaderDir.mkdirs();
-                api.logging().logToOutput("Created AutoVader directory at: " + autoVaderDir.getAbsolutePath());
+    private static class BrowserSession {
+        public final Playwright playwright;
+        public final BrowserContext ctx;
+        public final Page page;
+
+        public BrowserSession(Playwright playwright, BrowserContext ctx, Page page) {
+            this.playwright = playwright;
+            this.ctx = ctx;
+            this.page = page;
+        }
+    }
+
+    private BrowserSession initializeBrowser(String extensionPath, boolean headless, boolean shouldSendToBurp) throws Exception {
+        String homeDir = System.getProperty("user.home");
+        File autoVaderDir = new File(homeDir, ".AutoVader");
+        if (!autoVaderDir.exists()) {
+            autoVaderDir.mkdirs();
+            api.logging().logToOutput("Created AutoVader directory at: " + autoVaderDir.getAbsolutePath());
+        }
+
+        Playwright playwright = Playwright.create();
+        BrowserType.LaunchPersistentContextOptions launchOptions = new BrowserType.LaunchPersistentContextOptions();
+        String chromiumPath = AutoVaderExtension.chromiumPath.isEmpty() ? settings.getString("Path to Burp Chromium") : AutoVaderExtension.chromiumPath;
+        if (!chromiumPath.isEmpty()) {
+            launchOptions.setExecutablePath(Paths.get(chromiumPath));
+            api.logging().logToOutput("Using Burp Chromium at: " + chromiumPath);
+        } else {
+            api.logging().logToOutput("Burp Chromium not found, try changing Settings->Extensions->AutoVader->Path to Burp Chromium");
+        }
+
+        String userDataDir = new File(autoVaderDir, "browser-profile").getAbsolutePath();
+
+        if (extensionPath != null && !extensionPath.isEmpty()) {
+            List<String> args = new ArrayList<>();
+            args.add("--disable-extensions-except=" + extensionPath);
+            args.add("--load-extension=" + extensionPath);
+            if (shouldOpenDevtools) {
+                args.add("--auto-open-devtools-for-tabs");
             }
+            launchOptions.setArgs(args).setHeadless(headless);
+        } else {
+            launchOptions.setHeadless(headless);
+        }
 
-            playwright = Playwright.create();
-            BrowserType.LaunchPersistentContextOptions launchOptions = new BrowserType.LaunchPersistentContextOptions();
-            String chromiumPath = AutoVaderExtension.chromiumPath.isEmpty() ? settings.getString("Path to Burp Chromium") : AutoVaderExtension.chromiumPath;
-            if (!chromiumPath.isEmpty()) {
-                launchOptions.setExecutablePath(Paths.get(chromiumPath));
-                api.logging().logToOutput("Using Burp Chromium at: " + chromiumPath);
-            } else {
-                api.logging().logToOutput("Burp Chromium not found, try changing Settings->Extensions->AutoVader->Path to Burp Chromium");
+        BrowserContext ctx = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
+        Page page = ctx.pages().getFirst();
+
+        // Configure extension if present
+        String extId = detectAndConfigureExtension(page, extensionPath);
+
+        // Set up page handlers
+        page.onConsoleMessage(msg -> api.logging().logToOutput(msg.text()));
+
+        // Configure DOM Invader settings if extension detected
+        if (extId != null) {
+            try {
+                page.navigate("chrome-extension://" + extId + "/settings/settings.html");
+                page.evaluate(domInvaderConfig.generateSettingsScript());
+                api.logging().logToOutput("Configured extension settings");
+            } catch (Exception e) {
+                api.logging().logToError("Error configuring extension: " + e.getMessage());
             }
+        }
 
-            String userDataDir = new File(autoVaderDir, "browser-profile").getAbsolutePath();
+        // Set up sendToBurp binding
+        ctx.exposeBinding("sendToBurp", (source, arguments) -> {
+            String frameUrl = source.frame().url();
 
-            if (extensionPath != null && !extensionPath.isEmpty()) {
-                List<String> args = new ArrayList<>();
-                args.add("--disable-extensions-except=" + extensionPath);
-                args.add("--load-extension=" + extensionPath);
-                if (shouldOpenDevtools) {
-                    args.add("--auto-open-devtools-for-tabs");
-                }
-                launchOptions.setArgs(args).setHeadless(headless);
-            } else {
-                launchOptions.setHeadless(headless);
+            if (arguments.length != 2) throw new RuntimeException("bad args");
+
+            Gson gson = new Gson();
+            String json = gson.toJson(arguments[0]);
+            String type = arguments[1].toString();
+
+            if(shouldSendToBurp) {
+                issueReporter.parseAndReport(json, type, frameUrl);
             }
+            return null;
+        });
 
-            ctx = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
-            String extId = null;
-            Page page = ctx.pages().getFirst();
-            if (extensionPath != null && !extensionPath.isEmpty()) {
-                try {
-                    try {
-                        page.navigate("chrome://extensions");
-                        page.click("cr-toggle#devMode");
-                        Locator extensionCard = page.locator("extensions-item").first();
-                        extId = extensionCard.getAttribute("id");
+        // Set up CSP removal if configured
+        if(settings.getBoolean("Remove CSP")) {
+            page.route("**/*", route -> {
+                var response = route.fetch();
 
-                        if (extId != null) {
-                            api.logging().logToOutput("Found extension ID from chrome://extensions: " + extId);
-                        }
-                    } catch (Exception e) {
-                        api.logging().logToOutput("Could not access chrome://extensions: " + e.getMessage());
-                    }
-                } catch (Exception e) {
-                    api.logging().logToOutput("Error detecting extension ID: " + e.getMessage());
-                }
+                Map<String, String> headers = new HashMap<>(response.headers());
 
-                if (extId == null) {
-                    api.logging().logToError("Could not detect extension ID, extension features will not be configured");
-                }
-            }
-            page.onConsoleMessage(msg -> api.logging().logToOutput(msg.text()));
-            if (extId != null) {
-                try {
-                    page.navigate("chrome-extension://" + extId + "/settings/settings.html");
-                    page.evaluate(domInvaderConfig.generateSettingsScript());
-                    api.logging().logToOutput("Configured extension settings");
-                } catch (Exception e) {
-                    api.logging().logToError("Error configuring extension: " + e.getMessage());
-                }
-            }
-
-            ctx.exposeBinding("sendToBurp", (source, arguments) -> {
-                String frameUrl = source.frame().url();
-                if (arguments.length != 2) throw new RuntimeException("bad args");
-
-                Gson gson = new Gson();
-                String json = gson.toJson(arguments[0]);
-                String type = arguments[1].toString();
-
-                if(shouldSendToBurp) {
-                    issueReporter.parseAndReport(json, type, frameUrl);
-                }
-                return null;
-            });
-
-            if(settings.getBoolean("Remove CSP")) {
-                page.route("**/*", route -> {
-                    var response = route.fetch();
-
-                    Map<String, String> headers = new HashMap<>(response.headers());
-
-                    headers.entrySet().removeIf(entry -> {
-                        String key = entry.getKey().toLowerCase();
-                        return key.equals("content-security-policy");
-                    });
-
-                    route.fulfill(new Route.FulfillOptions()
-                            .setResponse(response)
-                            .setHeaders(headers));
+                headers.entrySet().removeIf(entry -> {
+                    String key = entry.getKey().toLowerCase();
+                    return key.equals("content-security-policy");
                 });
+
+                route.fulfill(new Route.FulfillOptions()
+                        .setResponse(response)
+                        .setHeaders(headers));
+            });
+        }
+
+        return new BrowserSession(playwright, ctx, page);
+    }
+
+    private String detectAndConfigureExtension(Page page, String extensionPath) {
+        if (extensionPath == null || extensionPath.isEmpty()) {
+            return null;
+        }
+
+        String extId = null;
+        try {
+            try {
+                page.navigate("chrome://extensions");
+                page.click("cr-toggle#devMode");
+                Locator extensionCard = page.locator("extensions-item").first();
+                extId = extensionCard.getAttribute("id");
+
+                if (extId != null) {
+                    api.logging().logToOutput("Found extension ID from chrome://extensions: " + extId);
+                }
+            } catch (Exception e) {
+                api.logging().logToOutput("Could not access chrome://extensions: " + e.getMessage());
             }
+        } catch (Exception e) {
+            api.logging().logToOutput("Error detecting extension ID: " + e.getMessage());
+        }
+
+        if (extId == null) {
+            api.logging().logToError("Could not detect extension ID, extension features will not be configured");
+        }
+
+        return extId;
+    }
+
+    private void waitForDomInvader(Page page, String url) {
+        try {
+            api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
+            page.waitForFunction(
+                    "() => window.BurpDOMInvader && window.BurpDOMInvader.isComplete",
+                    null,
+                    new Page.WaitForFunctionOptions().setPollingInterval(100).setTimeout(30000)
+            );
+            api.logging().logToOutput("DOM Invader analysis complete for: " + url);
+        } catch (Exception e) {
+            api.logging().logToError("DOM Invader wait failed for: " + url + " - " + e.getMessage());
+        }
+    }
+
+    public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
+        BrowserSession session = null;
+        try {
+            session = initializeBrowser(extensionPath, headless, shouldSendToBurp);
 
             for (String url : urls) {
                 try {
-                    page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                    page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-                    api.logging().logToOutput("Waiting for DOM Invader to complete analysis for: " + url);
-                    page.waitForFunction(
-                            "() => window.BurpDOMInvader && window.BurpDOMInvader.isComplete",
-                            null,
-                            new Page.WaitForFunctionOptions().setPollingInterval(100).setTimeout(30000)
-                    );
-                    api.logging().logToOutput("DOM Invader analysis complete for: " + url);
+                    //horrible hack because for some reason DOM Invader settings are not synchronised on the first request
+                    session.page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    session.page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    waitForDomInvader(session.page, url);
                 } catch (Throwable e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());
                 }
             }
 
-            if (closeBrowser) {
-                ctx.close();
-                playwright.close();
+            if (closeBrowser && session != null) {
+                session.ctx.close();
+                session.playwright.close();
             }
         } catch (Exception e) {
             api.logging().logToError("Error in Playwright rendering: " + e.getMessage());
-            if (ctx != null) {
-                ctx.close();
+            if (session != null) {
+                if (session.ctx != null) {
+                    session.ctx.close();
+                }
+                if (session.playwright != null) {
+                    session.playwright.close();
+                }
             }
-            if (playwright != null) {
-                playwright.close();
+        }
+    }
+
+    public void renderHttpRequests(List<HttpRequest> requests, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
+        BrowserSession session = null;
+        try {
+            session = initializeBrowser(extensionPath, headless, shouldSendToBurp);
+
+            // Process each HttpRequest
+            for (HttpRequest burpReq : requests) {
+                try {
+                    String url = burpReq.url();
+                    String method = burpReq.method();
+
+                    // Create request options
+                    RequestOptions opts = RequestOptions.create().setMethod(method);
+
+                    // Set headers from Burp request
+                    for (HttpHeader h : burpReq.headers()) {
+                        // Skip content-length as it will be calculated automatically
+                        if (!h.name().equalsIgnoreCase("content-length")) {
+                            opts.setHeader(h.name(), h.value());
+                        }
+                    }
+
+                    // Set body data if present
+                    String body = burpReq.bodyToString();
+                    api.logging().logToOutput("body:" + body);
+                    if (body != null && !body.isEmpty()) {
+                        opts.setData(body);
+                    }
+
+                    api.logging().logToOutput("Sending " + method + " request to: " + url);
+
+                    // Make the request using context
+                    APIResponse response = session.ctx.request().fetch(url, opts);
+                    // Navigate to the response URL to render it in the browser
+
+                    String stub = response.url();
+                    session.page.route(stub, route -> route.fulfill(
+                            new Route.FulfillOptions()
+                                    .setStatus(response.status())
+                                    .setHeaders(response.headers())
+                                    .setBodyBytes(response.body())
+                    ));
+                    session.page.navigate(stub, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    session.page.navigate(stub, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    //session.page.navigate(response.url(), new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+
+                    waitForDomInvader(session.page, url);
+                } catch (Throwable e) {
+                    api.logging().logToError("Failed to process request: " + burpReq.url() + " - " + e.getMessage());
+                }
+            }
+
+            if (closeBrowser && session != null) {
+                session.ctx.close();
+                session.playwright.close();
+            }
+        } catch (Exception e) {
+            api.logging().logToError("Error in Playwright rendering: " + e.getMessage());
+            if (session != null) {
+                if (session.ctx != null) {
+                    session.ctx.close();
+                }
+                if (session.playwright != null) {
+                    session.playwright.close();
+                }
             }
         }
     }

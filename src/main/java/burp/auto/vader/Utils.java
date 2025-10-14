@@ -1,5 +1,11 @@
 package burp.auto.vader;
 
+import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.params.HttpParameter;
+import burp.api.montoya.http.message.params.HttpParameterType;
+import burp.api.montoya.http.message.params.ParsedHttpParameter;
+import burp.api.montoya.http.message.requests.HttpRequest;
+
 import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
@@ -8,6 +14,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
+import static burp.auto.vader.AutoVaderExtension.api;
 import static burp.auto.vader.AutoVaderExtension.settings;
 
 public class Utils {
@@ -126,6 +133,70 @@ public class Utils {
         }
 
         return allEnumeratedUrls;
+    }
+
+    /**
+     * Enumerates all POST parameters in an HTTP request and creates a list of HttpRequest objects
+     * with the canary injected into each parameter individually.
+     *
+     * @param request The original HttpRequest
+     * @param canary The canary value to inject
+     * @param payload Additional payload to append after canary
+     * @return List of HttpRequest objects with canary injected into each POST parameter
+     */
+    public static List<HttpRequest> enumeratePostParameters(HttpRequest request, String canary, String payload) {
+        List<HttpRequest> enumeratedRequests = new ArrayList<>();
+
+        // Get all body parameters (POST parameters)
+        List<ParsedHttpParameter> bodyParams = request.parameters();
+
+        if (bodyParams.isEmpty()) {
+            // No POST parameters
+            enumeratedRequests.add(request);
+            return enumeratedRequests;
+        }
+
+        // Create a request for each parameter with canary injected
+        for (int i = 0; i < bodyParams.size(); i++) {
+            HttpRequest modifiedRequest = request;
+
+            for (int j = 0; j < bodyParams.size(); j++) {
+                HttpParameter param = bodyParams.get(j);
+
+                if (j == i) {
+                    // Inject canary into this parameter
+                    String newValue = canary + payload;
+                    modifiedRequest = modifiedRequest.withUpdatedParameters(
+                        HttpParameter.parameter(param.name(), newValue, HttpParameterType.BODY)
+                    );
+                }
+            }
+
+            enumeratedRequests.add(modifiedRequest);
+        }
+
+        return enumeratedRequests;
+    }
+
+    /**
+     * Enumerates POST parameters for multiple HTTP request/response pairs.
+     *
+     * @param requestResponses List of HttpRequestResponse objects
+     * @param canary The canary value to inject
+     * @param payload Additional payload to append after canary
+     * @return List of all enumerated HttpRequest objects
+     */
+    public static List<HttpRequest> enumeratePostParameters(List<HttpRequestResponse> requestResponses,
+                                                           String canary, String payload) {
+        List<HttpRequest> allEnumeratedRequests = new ArrayList<>();
+
+        for (HttpRequestResponse reqResp : requestResponses) {
+            HttpRequest request = reqResp.request();
+            List<HttpRequest> enumerated = enumeratePostParameters(request, canary, payload);
+            allEnumeratedRequests.addAll(enumerated);
+        }
+
+        return allEnumeratedRequests;
     }
 
     public static void openUrl(String url) {

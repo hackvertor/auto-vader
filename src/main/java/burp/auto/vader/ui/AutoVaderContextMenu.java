@@ -1,5 +1,7 @@
 package burp.auto.vader.ui;
 
+import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 import burp.auto.vader.*;
@@ -17,6 +19,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     private enum ScanType {
         WEB_MESSAGE,
         QUERY_PARAMS,
+        POST_PARAMS,
         CLIENT_SIDE_PROTOTYPE_POLLUTION,
         CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS,
         INJECT_INTO_ALL_SOURCES,
@@ -39,6 +42,18 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                             .requestResponse()
                             .request()
                             .url());
+        }
+        return null;
+    }
+
+    private List<HttpRequestResponse> extractRequestResponsesFromEvent(ContextMenuEvent event) {
+        if (!event.selectedRequestResponses().isEmpty()) {
+            return event.selectedRequestResponses();
+        } else if (event.messageEditorRequestResponse().isPresent()) {
+            return Collections.singletonList(
+                    event.messageEditorRequestResponse()
+                            .get()
+                            .requestResponse());
         }
         return null;
     }
@@ -118,8 +133,36 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         });
     }
 
+    private void executeScanForPosts(ContextMenuEvent event, PostScanProcessor scanProcessor, ScanType scanType) {
+        AutoVaderExtension.executorService.submit(() -> {
+            String domInvaderPath = AutoVaderExtension.domInvaderPath;
+            String canary = projectCanary;
+            List<HttpRequestResponse> requestResponses = extractRequestResponsesFromEvent(event);
+
+            if (requestResponses == null) {
+                return;
+            }
+
+            List<HttpRequest> requestsToScan = scanProcessor.processRequests(requestResponses, canary);
+            if (requestsToScan.isEmpty()) {
+                api.logging().logToOutput("No requests with POST parameters to scan");
+                return;
+            }
+
+            api.logging().logToOutput("Scanning " + requestsToScan.size() + " requests with canary: " + canary);
+            DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
+            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
+                    .renderHttpRequests(requestsToScan, domInvaderPath, true, false, true);
+            api.logging().logToOutput("Completed scanning " + requestsToScan.size() + " requests via AutoVader");
+        });
+    }
+
     private interface ScanProcessor {
         List<String> processUrls(List<String> urls, String canary);
+    }
+
+    private interface PostScanProcessor {
+        List<HttpRequest> processRequests(List<HttpRequestResponse> requestResponses, String canary);
     }
 
     public List<Component> provideMenuItems(ContextMenuEvent event) {
@@ -148,6 +191,18 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
             }, ScanType.QUERY_PARAMS)
         );
         menu.add(scanAllQueryParametersMenu);
+        JMenuItem scanAllPostParametersMenu = new JMenuItem("Scan all POST params");
+        scanAllPostParametersMenu.addActionListener(e ->
+            executeScanForPosts(event, (requestResponses, canary) -> {
+                List<HttpRequest> enumeratedRequests = Utils.enumeratePostParameters(requestResponses, canary, payload);
+                api.logging().logToOutput("Requests: " + enumeratedRequests.size());
+                if (enumeratedRequests.isEmpty()) {
+                    api.logging().logToOutput("No POST parameters found to scan");
+                }
+                return enumeratedRequests;
+            }, ScanType.POST_PARAMS)
+        );
+        menu.add(scanAllPostParametersMenu);
         JMenuItem scanWebMessagesMenu = new JMenuItem("Scan web messages");
         scanWebMessagesMenu.addActionListener(e ->
             executeScan(event, (urls, canary) -> urls, ScanType.WEB_MESSAGE)
