@@ -1,5 +1,9 @@
 package burp.auto.vader;
 
+import java.awt.*;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
@@ -122,5 +126,18 @@ public class Utils {
         }
 
         return allEnumeratedUrls;
+    }
+
+    public static void openUrl(String url) {
+        if(url.startsWith("https://")) {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                try {
+                    Desktop.getDesktop().browse(new URI(url));
+                } catch (IOException ioException) {
+                } catch (URISyntaxException uriSyntaxException) {
+
+                }
+            }
+        }
     }
 }

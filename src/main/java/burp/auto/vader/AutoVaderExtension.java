@@ -6,8 +6,8 @@ import burp.api.montoya.ui.settings.SettingsPanelPersistence;
 import burp.api.montoya.ui.settings.SettingsPanelSetting;
 import burp.api.montoya.ui.settings.SettingsPanelWithData;
 import burp.auto.vader.ui.AutoVaderContextMenu;
+import burp.auto.vader.ui.AutoVaderMenuBar;
 
-import java.io.File;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,6 +21,7 @@ public class AutoVaderExtension implements BurpExtension
     public static String projectCanary = null;
     public static String domInvaderPath;
     public static String chromiumPath;
+    public static DOMInvaderConfig sharedConfig;
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
@@ -32,7 +33,10 @@ public class AutoVaderExtension implements BurpExtension
             api.persistence().extensionData().setString("canary", canary);
         }
         projectCanary = canary;
+        // Initialize shared config that will load persisted callbacks
+        sharedConfig = new DOMInvaderConfig();
         api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu(new IssueDeduplicator(api)));
+        api.userInterface().menuBar().registerMenu(AutoVaderMenuBar.generateMenuBar());
         AutoVaderExtension.domInvaderPath = Paths.get(
                 System.getProperty("user.home"),
                 ".BurpSuite",

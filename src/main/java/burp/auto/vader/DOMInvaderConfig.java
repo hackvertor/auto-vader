@@ -7,7 +7,7 @@ import static burp.auto.vader.AutoVaderExtension.api;
 
 public class DOMInvaderConfig {
 
-    private final String sinkCallback = """
+    public static final String DEFAULT_SINK_CALLBACK = """
 function(sinkDetails, sinks, interestingSinks) {
     const payload = {
         isInteresting: sinkDetails.isInteresting,
@@ -27,7 +27,7 @@ function(sinkDetails, sinks, interestingSinks) {
     return false;
 }""";
 
-    private final String sourceCallback = """
+    public static final String DEFAULT_SOURCE_CALLBACK = """
 function(sourceDetails, sources) {
     const payload = {
         isInteresting: sourceDetails.isInteresting,
@@ -39,7 +39,7 @@ function(sourceDetails, sources) {
         framePath: sourceDetails.framePath,
         event: sourceDetails.event
     };
-   
+
     if(payload.isInteresting) {
         sendToBurp(payload, "source");
         return true;
@@ -47,7 +47,7 @@ function(sourceDetails, sources) {
     return false;
 }""";
 
-    private final String messageCallback = """
+    public static final String DEFAULT_MESSAGE_CALLBACK = """
 function(msg) {
     const payload = {
         isInteresting: msg.isInteresting,
@@ -87,6 +87,10 @@ function(msg) {
     }
     return false;
 }""";
+
+    private String sinkCallback = DEFAULT_SINK_CALLBACK;
+    private String sourceCallback = DEFAULT_SOURCE_CALLBACK;
+    private String messageCallback = DEFAULT_MESSAGE_CALLBACK;
 
     public static class Profile {
         private String canary = "burpdomxss";
@@ -291,10 +295,29 @@ function(msg) {
 
     public DOMInvaderConfig(Profile profile) {
         this.profile = profile;
+        loadCallbacksFromPersistence();
     }
 
     public DOMInvaderConfig() {
         this(new Profile());
+    }
+
+    private void loadCallbacksFromPersistence() {
+        if (api != null && api.persistence() != null) {
+            String savedSinkCallback = api.persistence().extensionData().getString("sinkCallback");
+            String savedSourceCallback = api.persistence().extensionData().getString("sourceCallback");
+            String savedMessageCallback = api.persistence().extensionData().getString("messageCallback");
+
+            if (savedSinkCallback != null) {
+                sinkCallback = savedSinkCallback;
+            }
+            if (savedSourceCallback != null) {
+                sourceCallback = savedSourceCallback;
+            }
+            if (savedMessageCallback != null) {
+                messageCallback = savedMessageCallback;
+            }
+        }
     }
 
     public String getSinkCallback() {
@@ -307,6 +330,18 @@ function(msg) {
 
     public String getMessageCallback() {
         return messageCallback;
+    }
+
+    public void setSinkCallback(String sinkCallback) {
+        this.sinkCallback = sinkCallback;
+    }
+
+    public void setSourceCallback(String sourceCallback) {
+        this.sourceCallback = sourceCallback;
+    }
+
+    public void setMessageCallback(String messageCallback) {
+        this.messageCallback = messageCallback;
     }
 
     public String generateSettingsScript() {
