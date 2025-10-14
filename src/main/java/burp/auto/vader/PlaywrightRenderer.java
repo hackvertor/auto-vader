@@ -116,8 +116,6 @@ public class PlaywrightRenderer {
 
         // Set up sendToBurp binding
         ctx.exposeBinding("sendToBurp", (source, arguments) -> {
-            String frameUrl = source.frame().url();
-
             if (arguments.length != 2) throw new RuntimeException("bad args");
 
             Gson gson = new Gson();
@@ -213,7 +211,7 @@ public class PlaywrightRenderer {
                 }
             }
 
-            if (closeBrowser && session != null) {
+            if (closeBrowser) {
                 session.ctx.close();
                 session.playwright.close();
             }

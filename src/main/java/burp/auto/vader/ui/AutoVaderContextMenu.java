@@ -179,7 +179,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
             });
         });
         menu.add(openDomInvaderMenu);
-        JMenuItem scanAllQueryParametersMenu = new JMenuItem("Scan all query params");
+        JMenuItem scanAllQueryParametersMenu = new JMenuItem("Scan all GET params");
         scanAllQueryParametersMenu.addActionListener(e ->
             executeScan(event, (urls, canary) -> {
                 List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary, payload);

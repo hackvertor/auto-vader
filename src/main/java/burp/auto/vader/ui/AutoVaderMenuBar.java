@@ -4,8 +4,11 @@ import burp.auto.vader.Utils;
 
 import javax.swing.*;
 
-import static burp.auto.vader.AutoVaderExtension.extensionName;
-import static burp.auto.vader.AutoVaderExtension.sharedConfig;
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+
+import static burp.auto.vader.AutoVaderExtension.*;
 
 public class AutoVaderMenuBar {
     public static JMenu generateMenuBar() {
@@ -15,6 +18,13 @@ public class AutoVaderMenuBar {
             SwingUtilities.invokeLater(() -> new CustomiseCallbacksFrame(sharedConfig))
         );
         menu.add(customiseCallbacksMenu);
+        JMenuItem copyCanaryMenu = new JMenuItem("Copy project canary to clipboard");
+        copyCanaryMenu.addActionListener(e -> {
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            StringSelection customTagCopyJSON = new StringSelection(projectCanary);
+            clipboard.setContents(customTagCopyJSON, null);
+        });
+        menu.add(copyCanaryMenu);
         JMenuItem reportFeedbackMenu = new JMenuItem("Report feedback");
         reportFeedbackMenu.addActionListener(e -> {
             Utils.openUrl("https://github.com/hackvertor/auto-vader/issues/new");
