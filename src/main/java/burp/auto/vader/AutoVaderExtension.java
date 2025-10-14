@@ -41,11 +41,11 @@ public class AutoVaderExtension implements BurpExtension
         ).toString();
         AutoVaderExtension.chromiumPath = PlaywrightRenderer.getBurpChromiumPath();
         settings = SettingsPanelBuilder.settingsPanel()
-                .withPersistence(SettingsPanelPersistence.USER_SETTINGS)
+                .withPersistence(SettingsPanelPersistence.PROJECT_SETTINGS)
                 .withTitle("AutoVader Settings")
                 .withDescription("""                                               
                         Payload - The payload to send along with the canary when scanning query parameters
-                        Remove CSP - CSP can break the callbacks that DOM Invader uses to function                     
+                        Remove CSP - CSP can break the callbacks that DOM Invader uses to function
                         """)
                 .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
                 .withSettings(
