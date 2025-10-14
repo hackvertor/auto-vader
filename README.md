@@ -11,7 +11,6 @@ In Burp Suite Professional, go to Extensions->BApp store and search for AutoVade
 ## Requirements
 
 - Burp Suite Professional (required for DOM Invader)
-- Java 17 or higher
 - DOM Invader extension (automatically detected from Burp installation)
 
 ## How to Use
