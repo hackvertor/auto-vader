@@ -43,12 +43,14 @@ public class AutoVaderExtension implements BurpExtension
         settings = SettingsPanelBuilder.settingsPanel()
                 .withPersistence(SettingsPanelPersistence.PROJECT_SETTINGS)
                 .withTitle("AutoVader Settings")
-                .withDescription("""                                               
+                .withDescription("""
+                        Path to Burp Chromium - If the autodetection fails you can specify a custom path
                         Payload - The payload to send along with the canary when scanning query parameters
                         Remove CSP - CSP can break the callbacks that DOM Invader uses to function
                         """)
                 .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
                 .withSettings(
+                        SettingsPanelSetting.stringSetting("Path to Burp Chromium", ""),
                         SettingsPanelSetting.stringSetting("Payload", ""),
                         SettingsPanelSetting.booleanSetting("Remove CSP", true)
                 )

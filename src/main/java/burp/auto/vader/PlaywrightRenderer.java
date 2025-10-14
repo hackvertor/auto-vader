@@ -63,12 +63,12 @@ public class PlaywrightRenderer {
 
             playwright = Playwright.create();
             BrowserType.LaunchPersistentContextOptions launchOptions = new BrowserType.LaunchPersistentContextOptions();
-            String chromiumPath = AutoVaderExtension.chromiumPath;
+            String chromiumPath = AutoVaderExtension.chromiumPath.isEmpty() ? settings.getString("Path to Burp Chromium") : AutoVaderExtension.chromiumPath;
             if (!chromiumPath.isEmpty()) {
                 launchOptions.setExecutablePath(Paths.get(chromiumPath));
                 api.logging().logToOutput("Using Burp Chromium at: " + chromiumPath);
             } else {
-                api.logging().logToOutput("Burp Chromium not found, using system browser");
+                api.logging().logToOutput("Burp Chromium not found, try changing Settings->Extensions->AutoVader->Path to Burp Chromium");
             }
 
             String userDataDir = new File(autoVaderDir, "browser-profile").getAbsolutePath();
