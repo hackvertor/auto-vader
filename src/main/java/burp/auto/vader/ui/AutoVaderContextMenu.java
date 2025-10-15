@@ -113,6 +113,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         AutoVaderExtension.executorService.submit(() -> {
             String domInvaderPath = AutoVaderExtension.domInvaderPath;
             String canary = projectCanary;
+            int delay = settings.getInteger("Delay MS");
             List<String> urls = extractUrlsFromEvent(event);
 
             if (urls == null) {
@@ -128,7 +129,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
             api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
             DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
             new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderUrls(urlsToScan, domInvaderPath, true, false, true);
+                    .renderUrls(urlsToScan, domInvaderPath, true, false, true, delay);
             api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
         });
     }
@@ -151,8 +152,9 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
 
             api.logging().logToOutput("Scanning " + requestsToScan.size() + " requests with canary: " + canary);
             DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
+            int delay = settings.getInteger("Delay MS");
             new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderHttpRequests(requestsToScan, domInvaderPath, true, false, true);
+                    .renderHttpRequests(requestsToScan, domInvaderPath, true, false, true, delay);
             api.logging().logToOutput("Completed scanning " + requestsToScan.size() + " requests via AutoVader");
         });
     }
@@ -174,8 +176,9 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         openDomInvaderMenu.addActionListener(e -> {
             executorService.submit(() -> {
                 String domInvaderPath = AutoVaderExtension.domInvaderPath;
+                int delay = settings.getInteger("Delay MS");
                 new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)), deduper, true)
-                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false);
+                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false, delay);
             });
         });
         menu.add(openDomInvaderMenu);
@@ -235,8 +238,9 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
                 String domInvaderPath = AutoVaderExtension.domInvaderPath;
                 DOMInvaderConfig.Profile profile = DOMInvaderConfig.customProfile(projectCanary);
                 profile.setRedirectBreakpoint(true);
+                int delay = settings.getInteger("Delay MS");
                 new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, true)
-                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false);
+                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false, delay);
             });
         });
         menu.add(redirectBreakpointMenu);

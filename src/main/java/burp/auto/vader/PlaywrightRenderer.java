@@ -193,7 +193,7 @@ public class PlaywrightRenderer {
         }
     }
 
-    public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
+    public void renderUrls(List<String> urls, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp, int delay) {
         BrowserSession session = null;
         try {
             DOMInvaderIssueReporter issueReporter = new DOMInvaderIssueReporter(api, issueDeduplicator);
@@ -204,7 +204,13 @@ public class PlaywrightRenderer {
                     issueReporter.setRequest(HttpRequest.httpRequestFromUrl(url));
                     //horrible hack because for some reason DOM Invader settings are not synchronised on the first request
                     session.page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    if(delay > 0) {
+                        Thread.sleep(delay);
+                    }
                     session.page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    if(delay > 0) {
+                        Thread.sleep(delay);
+                    }
                     waitForDomInvader(session.page, url);
                 } catch (Throwable e) {
                     api.logging().logToError("Failed to load URL: " + url + " - " + e.getMessage());
@@ -228,7 +234,7 @@ public class PlaywrightRenderer {
         }
     }
 
-    public void renderHttpRequests(List<HttpRequest> requests, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp) {
+    public void renderHttpRequests(List<HttpRequest> requests, String extensionPath, boolean closeBrowser, boolean headless, boolean shouldSendToBurp, int delay) {
         BrowserSession session = null;
         try {
             DOMInvaderIssueReporter issueReporter = new DOMInvaderIssueReporter(api, issueDeduplicator);
@@ -273,7 +279,13 @@ public class PlaywrightRenderer {
                                     .setBodyBytes(response.body())
                     ));
                     session.page.navigate(stub, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    if(delay > 0) {
+                        Thread.sleep(delay);
+                    }
                     session.page.navigate(stub, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                    if(delay > 0) {
+                        Thread.sleep(delay);
+                    }
                     //session.page.navigate(response.url(), new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
 
                     waitForDomInvader(session.page, url);
@@ -282,7 +294,7 @@ public class PlaywrightRenderer {
                 }
             }
 
-            if (closeBrowser && session != null) {
+            if (closeBrowser) {
                 session.ctx.close();
                 session.playwright.close();
             }
