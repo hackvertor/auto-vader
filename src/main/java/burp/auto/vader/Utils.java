@@ -14,9 +14,6 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 
-import static burp.auto.vader.AutoVaderExtension.api;
-import static burp.auto.vader.AutoVaderExtension.settings;
-
 public class Utils {
 
     private static final String LETTERS = "abcdefghijklmnopqrstuvwxyz";
@@ -148,11 +145,10 @@ public class Utils {
         List<HttpRequest> enumeratedRequests = new ArrayList<>();
 
         // Get all body parameters (POST parameters)
-        List<ParsedHttpParameter> bodyParams = request.parameters();
+        List<ParsedHttpParameter> bodyParams = request.parameters().stream().filter(param -> param.type() == HttpParameterType.BODY).toList();
 
         if (bodyParams.isEmpty()) {
             // No POST parameters
-            enumeratedRequests.add(request);
             return enumeratedRequests;
         }
 

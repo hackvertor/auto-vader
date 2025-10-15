@@ -166,10 +166,10 @@ public class PlaywrightRenderer {
                     api.logging().logToOutput("Found extension ID from chrome://extensions: " + extId);
                 }
             } catch (Exception e) {
-                api.logging().logToOutput("Could not access chrome://extensions: " + e.getMessage());
+                api.logging().logToError("Could not access chrome://extensions: " + e.getMessage());
             }
         } catch (Exception e) {
-            api.logging().logToOutput("Error detecting extension ID: " + e.getMessage());
+            api.logging().logToError("Error detecting extension ID: " + e.getMessage());
         }
 
         if (extId == null) {
@@ -260,12 +260,9 @@ public class PlaywrightRenderer {
 
                     // Set body data if present
                     String body = burpReq.bodyToString();
-                    api.logging().logToOutput("body:" + body);
                     if (body != null && !body.isEmpty()) {
                         opts.setData(body);
                     }
-
-                    api.logging().logToOutput("Sending " + method + " request to: " + url);
 
                     // Make the request using context
                     APIResponse response = session.ctx.request().fetch(url, opts);
