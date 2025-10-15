@@ -286,8 +286,6 @@ public class PlaywrightRenderer {
                     if(delay > 0) {
                         Thread.sleep(delay);
                     }
-                    //session.page.navigate(response.url(), new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
-
                     waitForDomInvader(session.page, url);
                 } catch (Throwable e) {
                     api.logging().logToError("Failed to process request: " + burpReq.url() + " - " + e.getMessage());
