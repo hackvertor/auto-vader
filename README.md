@@ -66,6 +66,7 @@ AutoVader provides project-specific settings accessible through Burp Suite's Set
 - **Path to Burp Chromium**: Allows you to overwrite the Chromium path if auto-detection fails.
 - **Payload**: Custom payload to append to canary values when scanning
 - **Delay**: Delay between requests
+- **Always open devtools**: Each time the browser window is open the devtools panel will be shown
 - **Remove CSP**: Removes Content-Security-Policy headers to ensure DOM Invader functions correctly (enabled by default)
 
 ### How It Works
