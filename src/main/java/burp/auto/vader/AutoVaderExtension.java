@@ -52,6 +52,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         Path to Burp Chromium - If the autodetection fails you can specify a custom path
                         Payload - The payload to send along with the canary when scanning query parameters
                         Delay - The amount of delay between requests in ms
+                        Always open devtools - Each time the browser window is open the devtools panel will be shown
                         Remove CSP - CSP can break the callbacks that DOM Invader uses to function
                         """)
                 .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
@@ -59,6 +60,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         SettingsPanelSetting.stringSetting("Path to Burp Chromium", ""),
                         SettingsPanelSetting.stringSetting("Payload", ""),
                         SettingsPanelSetting.integerSetting("Delay MS", 0),
+                        SettingsPanelSetting.booleanSetting("Always open devtools", false),
                         SettingsPanelSetting.booleanSetting("Remove CSP", true)
                 )
                 .build();

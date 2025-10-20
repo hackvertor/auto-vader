@@ -45,8 +45,9 @@ public class PlaywrightRenderer {
     }
 
     public PlaywrightRenderer(DOMInvaderConfig domInvaderConfig, IssueDeduplicator deduper, boolean shouldOpenDevtools) {
+        boolean shouldAlwaysOpenDevtools = settings.getBoolean("Always open devtools");
         this.domInvaderConfig = domInvaderConfig;
-        this.shouldOpenDevtools = shouldOpenDevtools;
+        this.shouldOpenDevtools = shouldOpenDevtools || shouldAlwaysOpenDevtools;
         this.issueDeduplicator = deduper;
     }
 

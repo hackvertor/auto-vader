@@ -15,7 +15,7 @@ In Burp Suite Professional, go to Extensions->BApp store and search for AutoVade
 
 ## How to Use
 
-AutoVader adds a context menu to Burp Suite with multiple scanning options. Right-click on any request in the Target, Proxy History, or Repeater tabs to access AutoVader features:
+AutoVader adds a context menu to Burp Suite with multiple scanning options. Right-click on any request in the Target, Proxy History, or Repeater tabs to access AutoVader features.
 
 ### Available Scans
 
@@ -23,10 +23,15 @@ AutoVader adds a context menu to Burp Suite with multiple scanning options. Righ
 - Opens a browser with DOM Invader configured for manual testing
 - Useful for debugging or custom analysis
 
-**Scan all query params**
+**Scan all GET params**
 - Automatically enumerates all query parameters
 - Injects canary values into each parameter
 - Detects DOM-based vulnerabilities from URL inputs
+
+**Scan all POST params**
+- Automatically enumerates all POST parameters
+- Injects canary values into each parameter
+- Detects DOM-based vulnerabilities from POST inputs
 
 **Scan web messages**
 - Tests for postMessage vulnerabilities
@@ -56,9 +61,12 @@ AutoVader adds a context menu to Burp Suite with multiple scanning options. Righ
 
 ### Settings
 
-AutoVader provides project-specific settings accessible through Burp Suite's Settings menu:
+AutoVader provides project-specific settings accessible through Burp Suite's Settings:
 
+- **Path to Burp Chromium**: Allows you to overwrite the Chromium path if auto-detection fails.
 - **Payload**: Custom payload to append to canary values when scanning
+- **Delay**: Delay between requests
+- **Always open devtools**: Each time the browser window is open the devtools panel will be shown
 - **Remove CSP**: Removes Content-Security-Policy headers to ensure DOM Invader functions correctly (enabled by default)
 
 ### How It Works
