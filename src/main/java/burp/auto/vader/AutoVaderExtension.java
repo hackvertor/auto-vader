@@ -38,6 +38,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
         sharedConfig = new DOMInvaderConfig();
         api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu(new IssueDeduplicator(api)));
         api.userInterface().menuBar().registerMenu(AutoVaderMenuBar.generateMenuBar());
+        api.extension().registerUnloadingHandler(this);
         AutoVaderExtension.domInvaderPath = Paths.get(
                 System.getProperty("user.home"),
                 ".BurpSuite",
@@ -70,5 +71,6 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
     @Override
     public void extensionUnloaded() {
         executorService.shutdown();
+        api.logging().logToOutput(extensionName + " unloaded");
     }
 }
