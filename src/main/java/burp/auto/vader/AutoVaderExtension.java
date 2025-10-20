@@ -1,6 +1,7 @@
 package burp.auto.vader;
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.extension.ExtensionUnloadingHandler;
 import burp.api.montoya.ui.settings.SettingsPanelBuilder;
 import burp.api.montoya.ui.settings.SettingsPanelPersistence;
 import burp.api.montoya.ui.settings.SettingsPanelSetting;
@@ -12,7 +13,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class AutoVaderExtension implements BurpExtension
+public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHandler
 {
     public static MontoyaApi api;
     public static String extensionName = "AutoVader";
@@ -62,5 +63,10 @@ public class AutoVaderExtension implements BurpExtension
                 )
                 .build();
         api.userInterface().registerSettingsPanel(settings);
+    }
+
+    @Override
+    public void extensionUnloaded() {
+        executorService.shutdown();
     }
 }

@@ -116,8 +116,8 @@ public class PlaywrightRenderer {
 
         // Set up sendToBurp binding
         ctx.exposeBinding("sendToBurp", (source, arguments) -> {
+            if (!source.frame().url().equals(issueReporter.getRequest().url())) throw new RuntimeException("Invalid source");
             if (arguments.length != 2) throw new RuntimeException("bad args");
-
             Gson gson = new Gson();
             String json = gson.toJson(arguments[0]);
             String type = arguments[1].toString();
