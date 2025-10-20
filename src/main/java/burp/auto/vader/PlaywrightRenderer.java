@@ -117,7 +117,13 @@ public class PlaywrightRenderer {
 
         // Set up sendToBurp binding
         ctx.exposeBinding("sendToBurp", (source, arguments) -> {
-            if (!source.frame().url().equals(issueReporter.getRequest().url())) throw new RuntimeException("Invalid source");
+            String scannedUrl = issueReporter.getRequest().url();
+            if (isOutsideScannedUrl(source.frame().url(), scannedUrl)) {
+                api.logging().logToError("Invalid source when sending to Burp");
+                api.logging().logToError("Source:" + source.frame().url());
+                api.logging().logToError("Scanned URL:" + scannedUrl);
+                throw new RuntimeException("Invalid source");
+            }
             if (arguments.length != 2) throw new RuntimeException("bad args");
             Gson gson = new Gson();
             String json = gson.toJson(arguments[0]);
@@ -201,6 +207,7 @@ public class PlaywrightRenderer {
             session = initializeBrowser(extensionPath, headless, shouldSendToBurp, issueReporter);
 
             for (String url : urls) {
+                if(!url.startsWith("http://") && !url.startsWith("https://")) continue;
                 try {
                     issueReporter.setRequest(HttpRequest.httpRequestFromUrl(url));
                     //horrible hack because for some reason DOM Invader settings are not synchronised on the first request
@@ -246,6 +253,7 @@ public class PlaywrightRenderer {
                 issueReporter.setRequest(burpReq);
                 try {
                     String url = burpReq.url();
+                    if(!url.startsWith("http://") && !url.startsWith("https://")) continue;
                     String method = burpReq.method();
 
                     // Create request options
@@ -305,6 +313,12 @@ public class PlaywrightRenderer {
                 }
             }
         }
+    }
+
+    private boolean isOutsideScannedUrl(String sourceUrl, String scannedUrl) {
+        return !sourceUrl.equals(scannedUrl)
+                && !sourceUrl.startsWith(scannedUrl + "/")
+                && !sourceUrl.startsWith(scannedUrl + "?");
     }
 
     public static String getBurpChromiumPath() {
