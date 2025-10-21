@@ -8,6 +8,8 @@ import com.microsoft.playwright.options.RequestOptions;
 import com.microsoft.playwright.options.WaitUntilState;
 
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -118,7 +120,13 @@ public class PlaywrightRenderer {
         // Set up sendToBurp binding
         ctx.exposeBinding("sendToBurp", (source, arguments) -> {
             String scannedUrl = issueReporter.getRequest().url();
-            if (isOutsideScannedUrl(source.frame().url(), scannedUrl)) {
+            boolean isValidOrigin;
+            try {
+                isValidOrigin = getOrigin(source.frame().url()).equalsIgnoreCase(getOrigin(scannedUrl));
+            } catch (URISyntaxException | IllegalArgumentException e) {
+                isValidOrigin = false;
+            }
+            if(!isValidOrigin) {
                 api.logging().logToError("Invalid source when sending to Burp");
                 api.logging().logToError("Source:" + source.frame().url());
                 api.logging().logToError("Scanned URL:" + scannedUrl);
@@ -315,10 +323,21 @@ public class PlaywrightRenderer {
         }
     }
 
-    private boolean isOutsideScannedUrl(String sourceUrl, String scannedUrl) {
-        return !sourceUrl.equals(scannedUrl)
-                && !sourceUrl.startsWith(scannedUrl + "/")
-                && !sourceUrl.startsWith(scannedUrl + "?");
+    private  String getOrigin(String url) throws URISyntaxException {
+        URI uri = new URI(url);
+        String scheme = uri.getScheme();
+        String host = uri.getHost();
+        int port = uri.getPort();
+
+        if (scheme == null || host == null) {
+            throw new IllegalArgumentException("Invalid URL: " + url);
+        }
+
+        if (port == -1) {
+            return scheme + "://" + host;
+        } else {
+            return scheme + "://" + host + ":" + port;
+        }
     }
 
     public static String getBurpChromiumPath() {
