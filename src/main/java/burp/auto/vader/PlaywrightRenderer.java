@@ -10,6 +10,8 @@ import com.microsoft.playwright.options.WaitUntilState;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -65,6 +67,16 @@ public class PlaywrightRenderer {
         }
     }
 
+    private boolean fileExists(String filePath) {
+        Path path = Paths.get(filePath);
+        return Files.exists(path);
+    }
+
+    private boolean directoryExists(String directory) {
+        Path path = Paths.get(directory);
+        return Files.exists(path) && Files.isDirectory(path);
+    }
+
     private BrowserSession initializeBrowser(String extensionPath, boolean headless, boolean shouldSendToBurp, DOMInvaderIssueReporter issueReporter) throws Exception {
         String homeDir = System.getProperty("user.home");
         File autoVaderDir = new File(homeDir, ".AutoVader");
@@ -76,14 +88,23 @@ public class PlaywrightRenderer {
         Playwright playwright = Playwright.create();
         BrowserType.LaunchPersistentContextOptions launchOptions = new BrowserType.LaunchPersistentContextOptions();
         String chromiumPath = AutoVaderExtension.chromiumPath.isEmpty() ? settings.getString("Path to Burp Chromium") : AutoVaderExtension.chromiumPath;
-        if (!chromiumPath.isEmpty()) {
+        if (fileExists(chromiumPath)) {
             launchOptions.setExecutablePath(Paths.get(chromiumPath));
             api.logging().logToOutput("Using Burp Chromium at: " + chromiumPath);
         } else {
-            api.logging().logToOutput("Burp Chromium not found, try changing Settings->Extensions->AutoVader->Path to Burp Chromium");
+            api.logging().logToError("Burp Chromium not found, try changing Settings->Extensions->AutoVader->Path to Burp Chromium");
+            throw new RuntimeException("Burp Chromium not found");
         }
 
         String userDataDir = new File(autoVaderDir, "browser-profile").getAbsolutePath();
+
+        if(!directoryExists(extensionPath)) {
+            extensionPath = settings.getString("Path to DOM Invader");
+            if(!directoryExists(extensionPath)) {
+                api.logging().logToError("DOM Invader not found, try changing Settings->Extensions->AutoVader->Path to DOM Invader");
+                throw new RuntimeException("DOM Invader not found");
+            }
+        }
 
         if (extensionPath != null && !extensionPath.isEmpty()) {
             List<String> args = new ArrayList<>();
@@ -237,7 +258,7 @@ public class PlaywrightRenderer {
                 session.ctx.close();
                 session.playwright.close();
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             api.logging().logToError("Error in Playwright rendering: " + e.getMessage());
             if (session != null) {
                 if (session.ctx != null) {

@@ -50,7 +50,8 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                 .withPersistence(SettingsPanelPersistence.PROJECT_SETTINGS)
                 .withTitle("AutoVader Settings")
                 .withDescription("""
-                        Path to Burp Chromium - If the autodetection fails you can specify a custom path
+                        Path to DOM Invader - If the autodetection fails you can specify a custom path
+                        Path to Burp Chromium - If the autodetection fails you can specify a custom path to the executable
                         Payload - The payload to send along with the canary when scanning query parameters
                         Delay - The amount of delay between requests in ms
                         Always open devtools - Each time the browser window is open the devtools panel will be shown
@@ -58,7 +59,8 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         """)
                 .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
                 .withSettings(
-                        SettingsPanelSetting.stringSetting("Path to Burp Chromium", ""),
+                        SettingsPanelSetting.stringSetting("Path to DOM Invader", domInvaderPath),
+                        SettingsPanelSetting.stringSetting("Path to Burp Chromium", chromiumPath),
                         SettingsPanelSetting.stringSetting("Payload", ""),
                         SettingsPanelSetting.integerSetting("Delay MS", 0),
                         SettingsPanelSetting.booleanSetting("Always open devtools", false),

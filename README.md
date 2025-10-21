@@ -63,7 +63,8 @@ AutoVader adds a context menu to Burp Suite with multiple scanning options. Righ
 
 AutoVader provides project-specific settings accessible through Burp Suite's Settings:
 
-- **Path to Burp Chromium**: Allows you to overwrite the Chromium path if auto-detection fails.
+- **Path to DOM Invader**: Allows you to overwrite the DOM Invader path if auto-detection fails.
+- **Path to Burp Chromium**: Allows you to overwrite the Chromium path to the executable if auto-detection fails.
 - **Payload**: Custom payload to append to canary values when scanning
 - **Delay**: Delay between requests
 - **Always open devtools**: Each time the browser window is open the devtools panel will be shown
