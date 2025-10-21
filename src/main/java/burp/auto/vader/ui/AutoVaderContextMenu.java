@@ -10,6 +10,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import static burp.auto.vader.AutoVaderExtension.*;
@@ -167,6 +168,17 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         List<HttpRequest> processRequests(List<HttpRequestResponse> requestResponses, String canary);
     }
 
+    static void sortMenu(JMenu menu) {
+        List<JMenuItem> items = new ArrayList<>();
+        for (int i = 0; i < menu.getItemCount(); i++) {
+            JMenuItem item = menu.getItem(i);
+            if (item != null) items.add(item);
+        }
+        items.sort(Comparator.comparing(JMenuItem::getText, String.CASE_INSENSITIVE_ORDER));
+        menu.removeAll();
+        for (JMenuItem item : items) menu.add(item);
+    }
+
     public List<Component> provideMenuItems(ContextMenuEvent event) {
         String payload = settings.getString("Payload");
         List<Component> menuItemList = new ArrayList<>();
@@ -244,6 +256,7 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
             });
         });
         menu.add(redirectBreakpointMenu);
+        sortMenu(menu);
         menuItemList.add(menu);
         return menuItemList;
     }
