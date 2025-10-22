@@ -151,7 +151,7 @@ public class PlaywrightRenderer {
                 api.logging().logToError("Invalid source when sending to Burp");
                 api.logging().logToError("Source:" + source.frame().url());
                 api.logging().logToError("Scanned URL:" + scannedUrl);
-                throw new RuntimeException("Invalid source");
+                return null;
             }
             if (arguments.length != 2) throw new RuntimeException("bad args");
             Gson gson = new Gson();
