@@ -147,7 +147,7 @@ public class PlaywrightRenderer {
             } catch (URISyntaxException | IllegalArgumentException e) {
                 isValidOrigin = false;
             }
-            if(!isValidOrigin) {
+            if(!isValidOrigin && !issueReporter.getRequest().isInScope()) {
                 api.logging().logToError("Invalid source when sending to Burp");
                 api.logging().logToError("Source:" + source.frame().url());
                 api.logging().logToError("Scanned URL:" + scannedUrl);
