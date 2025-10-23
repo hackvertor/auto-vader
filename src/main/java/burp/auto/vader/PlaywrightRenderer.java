@@ -141,13 +141,14 @@ public class PlaywrightRenderer {
         // Set up sendToBurp binding
         ctx.exposeBinding("sendToBurp", (source, arguments) -> {
             String scannedUrl = issueReporter.getRequest().url();
+            String frameUrl = source.frame().url();
             boolean isValidOrigin;
             try {
-                isValidOrigin = getOrigin(source.frame().url()).equalsIgnoreCase(getOrigin(scannedUrl));
+                isValidOrigin = getOrigin(frameUrl).equalsIgnoreCase(getOrigin(scannedUrl));
             } catch (URISyntaxException | IllegalArgumentException e) {
                 isValidOrigin = false;
             }
-            if(!isValidOrigin && !issueReporter.getRequest().isInScope()) {
+            if(!isValidOrigin && !api.scope().isInScope(frameUrl)) {
                 api.logging().logToError("Invalid source when sending to Burp");
                 api.logging().logToError("Source:" + source.frame().url());
                 api.logging().logToError("Scanned URL:" + scannedUrl);
