@@ -1,15 +1,23 @@
 package burp.auto.vader;
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.core.Registration;
 import burp.api.montoya.extension.ExtensionUnloadingHandler;
+import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.ui.hotkey.HotKey;
+import burp.api.montoya.ui.hotkey.HotKeyContext;
+import burp.api.montoya.ui.hotkey.HotKeyHandler;
 import burp.api.montoya.ui.settings.SettingsPanelBuilder;
 import burp.api.montoya.ui.settings.SettingsPanelPersistence;
 import burp.api.montoya.ui.settings.SettingsPanelSetting;
 import burp.api.montoya.ui.settings.SettingsPanelWithData;
+import burp.auto.vader.actions.AutoVaderActions;
 import burp.auto.vader.ui.AutoVaderContextMenu;
 import burp.auto.vader.ui.AutoVaderMenuBar;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -23,10 +31,12 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
     public static String domInvaderPath;
     public static String chromiumPath;
     public static DOMInvaderConfig sharedConfig;
+    private AutoVaderActions actions;
+    private IssueDeduplicator deduper;
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
-        api.logging().logToOutput(extensionName + " v1.0.0");
+        api.logging().logToOutput(extensionName + " v1.0.1");
         AutoVaderExtension.api = api;
         String canary = api.persistence().extensionData().getString("canary");
         if(canary == null) {
@@ -34,9 +44,10 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
             api.persistence().extensionData().setString("canary", canary);
         }
         projectCanary = canary;
-        // Initialize shared config that will load persisted callbacks
         sharedConfig = new DOMInvaderConfig();
-        api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu(new IssueDeduplicator(api)));
+        deduper = new IssueDeduplicator(api);
+        actions = new AutoVaderActions(deduper);
+        api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu(deduper));
         api.userInterface().menuBar().registerMenu(AutoVaderMenuBar.generateMenuBar());
         api.extension().registerUnloadingHandler(this);
         AutoVaderExtension.domInvaderPath = Paths.get(
@@ -68,6 +79,124 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                 )
                 .build();
         api.userInterface().registerSettingsPanel(settings);
+        Burp burp = new Burp(api.burpSuite().version());
+        if(burp.hasCapability(Burp.Capability.REGISTER_HOTKEY)) {
+            registerAllHotkeys(api, burp);
+        }
+    }
+
+    private void registerAllHotkeys(MontoyaApi montoyaApi, Burp burp) {
+        List<HotkeyDefinition> hotkeys = Arrays.asList(
+                // Open DOM Invader
+                new HotkeyDefinition("Open DOM Invader", "Ctrl+Alt+D", event -> {
+                    String url = AutoVaderActions.extractUrlFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (url != null) {
+                        actions.openDOMInvader(url);
+                    }
+                }),
+
+                // Scan all GET params
+                new HotkeyDefinition("Scan all GET params", "Ctrl+Alt+G", event -> {
+                    List<String> urls = AutoVaderActions.extractUrlsFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (!urls.isEmpty()) {
+                        actions.scanAllQueryParameters(urls);
+                    }
+                }),
+
+                // Scan all POST params
+                new HotkeyDefinition("Scan all POST params", "Ctrl+Alt+P", event -> {
+                    List<HttpRequestResponse> requestResponses = AutoVaderActions.extractRequestResponsesFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (!requestResponses.isEmpty()) {
+                        actions.scanAllPostParameters(requestResponses);
+                    }
+                }),
+
+                // Scan web messages
+                new HotkeyDefinition("Scan web messages", "Ctrl+Alt+W", event -> {
+                    List<String> urls = AutoVaderActions.extractUrlsFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (!urls.isEmpty()) {
+                        actions.scanWebMessages(urls);
+                    }
+                }),
+
+                // Inject into all sources
+                new HotkeyDefinition("Inject into all sources", "Ctrl+Alt+I", event -> {
+                    List<String> urls = AutoVaderActions.extractUrlsFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (!urls.isEmpty()) {
+                        actions.injectIntoAllSources(urls);
+                    }
+                }),
+
+                // Inject into all sources & click everything
+                new HotkeyDefinition("Inject into all sources & click", "Ctrl+Alt+C", event -> {
+                    List<String> urls = AutoVaderActions.extractUrlsFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (!urls.isEmpty()) {
+                        actions.injectIntoAllSourcesAndClick(urls);
+                    }
+                }),
+
+                // Scan for client side prototype pollution
+                new HotkeyDefinition("Scan prototype pollution", "Ctrl+Shift+S", event -> {
+                    List<String> urls = AutoVaderActions.extractUrlsFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (!urls.isEmpty()) {
+                        actions.scanPrototypePollution(urls);
+                    }
+                }),
+
+                // Scan for client side prototype pollution gadgets
+                new HotkeyDefinition("Scan prototype pollution gadgets", "Ctrl+Shift+G", event -> {
+                    List<String> urls = AutoVaderActions.extractUrlsFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (!urls.isEmpty()) {
+                        actions.scanPrototypePollutionGadgets(urls);
+                    }
+                }),
+
+                // Intercept client side redirect
+                new HotkeyDefinition("Intercept client side redirect", "Ctrl+Alt+R", event -> {
+                    String url = AutoVaderActions.extractUrlFromMessageEditor(event.messageEditorRequestResponse().orElse(null));
+                    if (url != null) {
+                        actions.interceptClientSideRedirect(url);
+                    }
+                })
+        );
+
+        for (HotkeyDefinition hotkey : hotkeys) {
+            registerHotkey(montoyaApi, burp, hotkey);
+        }
+    }
+
+    private static class HotkeyDefinition {
+        final String name;
+        final String keyCombo;
+        final HotKeyHandler handler;
+
+        HotkeyDefinition(String name, String keyCombo, HotKeyHandler handler) {
+            this.name = name;
+            this.keyCombo = keyCombo;
+            this.handler = handler;
+        }
+    }
+
+    private void registerHotkey(MontoyaApi montoyaApi, Burp burp, HotkeyDefinition hotkey) {
+        Registration registration;
+
+        if(burp.hasCapability(Burp.Capability.REGISTER_HOTKEY_WITH_NAME)) {
+            registration = montoyaApi.userInterface().registerHotKeyHandler(
+                    HotKeyContext.HTTP_MESSAGE_EDITOR,
+                    HotKey.hotKey(hotkey.name, hotkey.keyCombo),
+                    hotkey.handler);
+        } else {
+            registration = montoyaApi.userInterface().registerHotKeyHandler(
+                    HotKeyContext.HTTP_MESSAGE_EDITOR,
+                    hotkey.keyCombo,
+                    hotkey.handler);
+        }
+
+        if(registration.isRegistered()) {
+            montoyaApi.logging().logToOutput("Successfully registered hotkey: " + hotkey.name + " (" + hotkey.keyCombo + ")");
+        } else {
+            montoyaApi.logging().logToError("Failed to register hotkey: " + hotkey.name + " (" + hotkey.keyCombo + ")");
+        }
     }
 
     @Override

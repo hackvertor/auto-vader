@@ -1,172 +1,26 @@
 package burp.auto.vader.ui;
 
 import burp.api.montoya.http.message.HttpRequestResponse;
-import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 import burp.auto.vader.*;
+import burp.auto.vader.actions.AutoVaderActions;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 import static burp.auto.vader.AutoVaderExtension.*;
 
 public class AutoVaderContextMenu implements ContextMenuItemsProvider {
-    private IssueDeduplicator deduper;
-    private enum ScanType {
-        WEB_MESSAGE,
-        QUERY_PARAMS,
-        POST_PARAMS,
-        CLIENT_SIDE_PROTOTYPE_POLLUTION,
-        CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS,
-        INJECT_INTO_ALL_SOURCES,
-        INJECT_INTO_ALL_SOURCES_AND_CLICK
-    }
+    private final AutoVaderActions actions;
 
     public AutoVaderContextMenu(IssueDeduplicator deduper) {
-        this.deduper = deduper;
+        this.actions = new AutoVaderActions(deduper);
     }
 
-    private List<String> extractUrlsFromEvent(ContextMenuEvent event) {
-        if (!event.selectedRequestResponses().isEmpty()) {
-            return event.selectedRequestResponses().stream()
-                    .map(requestResponse -> requestResponse.request().url())
-                    .toList();
-        } else if (event.messageEditorRequestResponse().isPresent()) {
-            return Collections.singletonList(
-                    event.messageEditorRequestResponse()
-                            .get()
-                            .requestResponse()
-                            .request()
-                            .url());
-        }
-        return null;
-    }
-
-    private List<HttpRequestResponse> extractRequestResponsesFromEvent(ContextMenuEvent event) {
-        if (!event.selectedRequestResponses().isEmpty()) {
-            return event.selectedRequestResponses();
-        } else if (event.messageEditorRequestResponse().isPresent()) {
-            return Collections.singletonList(
-                    event.messageEditorRequestResponse()
-                            .get()
-                            .requestResponse());
-        }
-        return null;
-    }
-
-    private DOMInvaderConfig.Profile createScanProfile(String canary, ScanType scanType) {
-        if (scanType == ScanType.WEB_MESSAGE) {
-            return DOMInvaderConfig.customProfile(canary)
-                    .setEnabled(true)
-                    .setPostmessage(true)
-                    .setSpoofOrigin(true)
-                    .setInjectCanary(true)
-                    .setDuplicateValues(true)
-                    .setGuessStrings(true)
-                    .setCrossDomainLeaks(true);
-        } else if(scanType == ScanType.INJECT_INTO_ALL_SOURCES) {
-            return DOMInvaderConfig.customProfile(canary)
-                    .setEnabled(true)
-                    .setInjectIntoSources(true);
-        } else if(scanType == ScanType.INJECT_INTO_ALL_SOURCES_AND_CLICK) {
-            return DOMInvaderConfig.customProfile(canary)
-                    .setEnabled(true)
-                    .setInjectIntoSources(true)
-                    .setFireEvents(true);
-        } else if(scanType == ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION) {
-            return DOMInvaderConfig.customProfile(canary)
-                    .setEnabled(true)
-                    .setPrototypePollution(true)
-                    .setPrototypePollutionAutoScale(true)
-                    .setPrototypePollutionNested(true)
-                    .setPrototypePollutionQueryString(true)
-                    .setPrototypePollutionHash(true)
-                    .setPrototypePollutionJson(true)
-                    .setPrototypePollutionVerify(true)
-                    .setPrototypePollutionCSP(false)
-                    .setPrototypePollutionXFrameOptions(false)
-                    .setPrototypePollutionSeparateFrame(false);
-        } else if(scanType == ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS) {
-            return DOMInvaderConfig.customProfile(canary)
-                    .setEnabled(true)
-                    .setPrototypePollution(true)
-                    .setPrototypePollutionDiscoverProperties(true)
-                    .setPrototypePollutionAutoScale(true)
-                    .setPrototypePollutionNested(true)
-                    .setPrototypePollutionQueryString(false)
-                    .setPrototypePollutionHash(false)
-                    .setPrototypePollutionJson(false)
-                    .setPrototypePollutionVerify(false)
-                    .setPrototypePollutionCSP(true)
-                    .setPrototypePollutionXFrameOptions(true)
-                    .setPrototypePollutionSeparateFrame(false);
-        } else {
-            return DOMInvaderConfig.customProfile(canary);
-        }
-    }
-
-    private void executeScan(ContextMenuEvent event, ScanProcessor scanProcessor, ScanType scanType) {
-        AutoVaderExtension.executorService.submit(() -> {
-            String domInvaderPath = AutoVaderExtension.domInvaderPath;
-            String canary = projectCanary;
-            int delay = settings.getInteger("Delay MS");
-            List<String> urls = extractUrlsFromEvent(event);
-
-            if (urls == null) {
-                return;
-            }
-
-            List<String> urlsToScan = scanProcessor.processUrls(urls, canary);
-            if (urlsToScan.isEmpty()) {
-                api.logging().logToOutput("No URLs to scan");
-                return;
-            }
-
-            api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
-            DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
-            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderUrls(urlsToScan, domInvaderPath, true, false, true, delay);
-            api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
-        });
-    }
-
-    private void executeScanForPosts(ContextMenuEvent event, PostScanProcessor scanProcessor, ScanType scanType) {
-        AutoVaderExtension.executorService.submit(() -> {
-            String domInvaderPath = AutoVaderExtension.domInvaderPath;
-            String canary = projectCanary;
-            List<HttpRequestResponse> requestResponses = extractRequestResponsesFromEvent(event);
-
-            if (requestResponses == null) {
-                return;
-            }
-
-            List<HttpRequest> requestsToScan = scanProcessor.processRequests(requestResponses, canary);
-            if (requestsToScan.isEmpty()) {
-                api.logging().logToOutput("No requests with POST parameters to scan");
-                return;
-            }
-
-            api.logging().logToOutput("Scanning " + requestsToScan.size() + " requests with canary: " + canary);
-            DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
-            int delay = settings.getInteger("Delay MS");
-            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderHttpRequests(requestsToScan, domInvaderPath, true, false, true, delay);
-            api.logging().logToOutput("Completed scanning " + requestsToScan.size() + " requests via AutoVader");
-        });
-    }
-
-    private interface ScanProcessor {
-        List<String> processUrls(List<String> urls, String canary);
-    }
-
-    private interface PostScanProcessor {
-        List<HttpRequest> processRequests(List<HttpRequestResponse> requestResponses, String canary);
-    }
 
     static void sortMenu(JMenu menu) {
         List<JMenuItem> items = new ArrayList<>();
@@ -180,82 +34,101 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
     }
 
     public List<Component> provideMenuItems(ContextMenuEvent event) {
-        String payload = settings.getString("Payload");
         List<Component> menuItemList = new ArrayList<>();
         JMenu menu = new JMenu(extensionName);
+
+        // Open DOM Invader
         JMenuItem openDomInvaderMenu = new JMenuItem("Open DOM Invader");
         openDomInvaderMenu.setEnabled(event.messageEditorRequestResponse().isPresent());
         openDomInvaderMenu.addActionListener(e -> {
-            executorService.submit(() -> {
-                String domInvaderPath = AutoVaderExtension.domInvaderPath;
-                int delay = settings.getInteger("Delay MS");
-                new PlaywrightRenderer(new DOMInvaderConfig(DOMInvaderConfig.customProfile(projectCanary)), deduper, true)
-                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false, delay);
-            });
+            String url = AutoVaderActions.extractSingleUrlFromEvent(event);
+            if (url != null) {
+                actions.openDOMInvader(url);
+            }
         });
         menu.add(openDomInvaderMenu);
+
+        // Scan all GET params
         JMenuItem scanAllQueryParametersMenu = new JMenuItem("Scan all GET params");
-        scanAllQueryParametersMenu.addActionListener(e ->
-            executeScan(event, (urls, canary) -> {
-                List<String> enumeratedUrls = Utils.enumerateQueryParameters(urls, canary, payload);
-                api.logging().logToOutput("Urls:" + enumeratedUrls);
-                if (enumeratedUrls.isEmpty()) {
-                    api.logging().logToOutput("No query parameters found to scan");
-                }
-                return enumeratedUrls;
-            }, ScanType.QUERY_PARAMS)
-        );
+        scanAllQueryParametersMenu.addActionListener(e -> {
+            List<String> urls = AutoVaderActions.extractUrlsFromEvent(event);
+            if (urls != null) {
+                actions.scanAllQueryParameters(urls);
+            }
+        });
         menu.add(scanAllQueryParametersMenu);
+
+        // Scan all POST params
         JMenuItem scanAllPostParametersMenu = new JMenuItem("Scan all POST params");
-        scanAllPostParametersMenu.addActionListener(e ->
-            executeScanForPosts(event, (requestResponses, canary) -> {
-                List<HttpRequest> enumeratedRequests = Utils.enumeratePostParameters(requestResponses, canary, payload);
-                api.logging().logToOutput("Requests: " + enumeratedRequests.size());
-                if (enumeratedRequests.isEmpty()) {
-                    api.logging().logToOutput("No POST parameters found to scan");
-                }
-                return enumeratedRequests;
-            }, ScanType.POST_PARAMS)
-        );
+        scanAllPostParametersMenu.addActionListener(e -> {
+            List<HttpRequestResponse> requestResponses = AutoVaderActions.extractRequestResponsesFromEvent(event);
+            if (requestResponses != null) {
+                actions.scanAllPostParameters(requestResponses);
+            }
+        });
         menu.add(scanAllPostParametersMenu);
+
+        // Scan web messages
         JMenuItem scanWebMessagesMenu = new JMenuItem("Scan web messages");
-        scanWebMessagesMenu.addActionListener(e ->
-            executeScan(event, (urls, canary) -> urls, ScanType.WEB_MESSAGE)
-        );
+        scanWebMessagesMenu.addActionListener(e -> {
+            List<String> urls = AutoVaderActions.extractUrlsFromEvent(event);
+            if (urls != null) {
+                actions.scanWebMessages(urls);
+            }
+        });
         menu.add(scanWebMessagesMenu);
+
+        // Inject into all sources
         JMenuItem injectIntoAllSourcesMenu = new JMenuItem("Inject into all sources");
-        injectIntoAllSourcesMenu.addActionListener(e ->
-                executeScan(event, (urls, canary) -> urls, ScanType.INJECT_INTO_ALL_SOURCES)
-        );
+        injectIntoAllSourcesMenu.addActionListener(e -> {
+            List<String> urls = AutoVaderActions.extractUrlsFromEvent(event);
+            if (urls != null) {
+                actions.injectIntoAllSources(urls);
+            }
+        });
         menu.add(injectIntoAllSourcesMenu);
+
+        // Inject into all sources & click everything
         JMenuItem injectIntoAllSourcesAndClickMenu = new JMenuItem("Inject into all sources & click everything");
-        injectIntoAllSourcesAndClickMenu.addActionListener(e ->
-                executeScan(event, (urls, canary) -> urls, ScanType.INJECT_INTO_ALL_SOURCES_AND_CLICK)
-        );
+        injectIntoAllSourcesAndClickMenu.addActionListener(e -> {
+            List<String> urls = AutoVaderActions.extractUrlsFromEvent(event);
+            if (urls != null) {
+                actions.injectIntoAllSourcesAndClick(urls);
+            }
+        });
         menu.add(injectIntoAllSourcesAndClickMenu);
+
+        // Scan for client side prototype pollution
         JMenuItem prototypePollutionMenu = new JMenuItem("Scan for client side prototype pollution");
-        prototypePollutionMenu.addActionListener(e ->
-                executeScan(event, (urls, canary) -> urls, ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION)
-        );
+        prototypePollutionMenu.addActionListener(e -> {
+            List<String> urls = AutoVaderActions.extractUrlsFromEvent(event);
+            if (urls != null) {
+                actions.scanPrototypePollution(urls);
+            }
+        });
         menu.add(prototypePollutionMenu);
+
+        // Scan for client side prototype pollution gadgets
         JMenuItem prototypePollutionGadgetsMenu = new JMenuItem("Scan for client side prototype pollution gadgets");
-        prototypePollutionGadgetsMenu.addActionListener(e ->
-                executeScan(event, (urls, canary) -> urls, ScanType.CLIENT_SIDE_PROTOTYPE_POLLUTION_GADGETS)
-        );
+        prototypePollutionGadgetsMenu.addActionListener(e -> {
+            List<String> urls = AutoVaderActions.extractUrlsFromEvent(event);
+            if (urls != null) {
+                actions.scanPrototypePollutionGadgets(urls);
+            }
+        });
         menu.add(prototypePollutionGadgetsMenu);
+
+        // Intercept client side redirect
         JMenuItem redirectBreakpointMenu = new JMenuItem("Intercept client side redirect");
         redirectBreakpointMenu.setEnabled(event.messageEditorRequestResponse().isPresent());
         redirectBreakpointMenu.addActionListener(e -> {
-            executorService.submit(() -> {
-                String domInvaderPath = AutoVaderExtension.domInvaderPath;
-                DOMInvaderConfig.Profile profile = DOMInvaderConfig.customProfile(projectCanary);
-                profile.setRedirectBreakpoint(true);
-                int delay = settings.getInteger("Delay MS");
-                new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, true)
-                        .renderUrls(Collections.singletonList(event.messageEditorRequestResponse().get().requestResponse().request().url()), domInvaderPath, false, false, false, delay);
-            });
+            String url = AutoVaderActions.extractSingleUrlFromEvent(event);
+            if (url != null) {
+                actions.interceptClientSideRedirect(url);
+            }
         });
         menu.add(redirectBreakpointMenu);
+
         sortMenu(menu);
         menuItemList.add(menu);
         return menuItemList;
