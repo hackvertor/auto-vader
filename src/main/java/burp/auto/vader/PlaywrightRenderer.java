@@ -150,7 +150,7 @@ public class PlaywrightRenderer {
             }
             if(!isValidOrigin && !api.scope().isInScope(frameUrl)) {
                 api.logging().logToError("Invalid source when sending to Burp");
-                api.logging().logToError("Source:" + source.frame().url());
+                api.logging().logToError("Source:" + frameUrl);
                 api.logging().logToError("Scanned URL:" + scannedUrl);
                 return null;
             }
