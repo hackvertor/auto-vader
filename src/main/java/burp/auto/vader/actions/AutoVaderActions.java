@@ -207,7 +207,7 @@ public class AutoVaderActions {
             }
 
             if(urls.stream().anyMatch(url -> !api.scope().isInScope(url))) {
-                api.logging().logToError("URL is not in scope. Skipping all URLs that are not in scope.");
+                api.logging().logToOutput("URL is not in scope. Skipping all URLs that are not in scope.");
             }
 
             List<String> urlsToScan = scanProcessor.processUrls(urls.stream().filter(url -> api.scope().isInScope(url)).toList(), canary);
@@ -241,7 +241,7 @@ public class AutoVaderActions {
             }
 
             if(requestsToScan.stream().anyMatch(request -> !api.scope().isInScope(request.url()))) {
-                api.logging().logToError("URL is not in scope. Skipping all URLs that are not in scope.");
+                api.logging().logToOutput("URL is not in scope. Skipping all URLs that are not in scope.");
             }
 
             requestsToScan = requestsToScan.stream().filter(request -> api.scope().isInScope(request.url())).collect(Collectors.toList());
