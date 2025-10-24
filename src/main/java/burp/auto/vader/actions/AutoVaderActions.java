@@ -8,6 +8,7 @@ import burp.auto.vader.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static burp.auto.vader.AutoVaderExtension.*;
 
@@ -205,7 +206,11 @@ public class AutoVaderActions {
                 return;
             }
 
-            List<String> urlsToScan = scanProcessor.processUrls(urls, canary);
+            if(urls.stream().anyMatch(url -> !api.scope().isInScope(url))) {
+                api.logging().logToError("URL is not in scope. Skipping all URLs that are not in scope.");
+            }
+
+            List<String> urlsToScan = scanProcessor.processUrls(urls.stream().filter(url -> api.scope().isInScope(url)).toList(), canary);
             if (urlsToScan.isEmpty()) {
                 api.logging().logToOutput("No URLs to scan after processing");
                 return;
@@ -234,6 +239,12 @@ public class AutoVaderActions {
                 api.logging().logToOutput("No requests with POST parameters to scan");
                 return;
             }
+
+            if(requestsToScan.stream().anyMatch(request -> !api.scope().isInScope(request.url()))) {
+                api.logging().logToError("URL is not in scope. Skipping all URLs that are not in scope.");
+            }
+
+            requestsToScan = requestsToScan.stream().filter(request -> api.scope().isInScope(request.url())).collect(Collectors.toList());
 
             api.logging().logToOutput("Scanning " + requestsToScan.size() + " requests with canary: " + canary);
             DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);

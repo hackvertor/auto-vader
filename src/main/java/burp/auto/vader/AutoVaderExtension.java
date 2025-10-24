@@ -68,7 +68,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         Always open devtools - Each time the browser window is open the devtools panel will be shown
                         Remove CSP - CSP can break the callbacks that DOM Invader uses to function
                         """)
-                .withKeywords("DOM", "Invader", "Auto", "Vader", "AutoVader")
+                .withKeywords("Auto", "Vader", "AutoVader", "AutoVader settings")
                 .withSettings(
                         SettingsPanelSetting.stringSetting("Path to DOM Invader", domInvaderPath),
                         SettingsPanelSetting.stringSetting("Path to Burp Chromium", chromiumPath),
