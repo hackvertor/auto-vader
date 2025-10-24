@@ -15,6 +15,7 @@ import burp.auto.vader.actions.AutoVaderActions;
 import burp.auto.vader.ui.AutoVaderContextMenu;
 import burp.auto.vader.ui.AutoVaderMenuBar;
 
+import javax.swing.*;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -83,6 +84,10 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
         if(burp.hasCapability(Burp.Capability.REGISTER_HOTKEY)) {
             registerAllHotkeys(api, burp);
         }
+    }
+
+    public static void alert(String msg) {
+        JOptionPane.showMessageDialog(null, msg);
     }
 
     private void registerAllHotkeys(MontoyaApi montoyaApi, Burp burp) {

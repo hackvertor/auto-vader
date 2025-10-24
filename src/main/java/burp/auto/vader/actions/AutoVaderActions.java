@@ -205,14 +205,18 @@ public class AutoVaderActions {
                 api.logging().logToOutput("No URLs to scan");
                 return;
             }
-
+            boolean someUrlsNotInScope = false;
             if(urls.stream().anyMatch(url -> !api.scope().isInScope(url))) {
                 api.logging().logToOutput("URL is not in scope. Skipping all URLs that are not in scope.");
+                someUrlsNotInScope = true;
             }
 
             List<String> urlsToScan = scanProcessor.processUrls(urls.stream().filter(url -> api.scope().isInScope(url)).toList(), canary);
             if (urlsToScan.isEmpty()) {
                 api.logging().logToOutput("No URLs to scan after processing");
+                if(someUrlsNotInScope) {
+                    alert("You need to add the URLs you want to scan to the scope");
+                }
                 return;
             }
 
@@ -235,13 +239,19 @@ public class AutoVaderActions {
             }
 
             List<HttpRequest> requestsToScan = scanProcessor.processRequests(requestResponses, canary);
-            if (requestsToScan.isEmpty()) {
-                api.logging().logToOutput("No requests with POST parameters to scan");
-                return;
-            }
 
+            boolean someUrlsNotInScope = false;
             if(requestsToScan.stream().anyMatch(request -> !api.scope().isInScope(request.url()))) {
                 api.logging().logToOutput("URL is not in scope. Skipping all URLs that are not in scope.");
+                someUrlsNotInScope = true;
+            }
+
+            if (requestsToScan.isEmpty()) {
+                api.logging().logToOutput("No requests with POST parameters to scan");
+                if(someUrlsNotInScope) {
+                    alert("You need to add the URLs you want to scan to the scope");
+                }
+                return;
             }
 
             requestsToScan = requestsToScan.stream().filter(request -> api.scope().isInScope(request.url())).collect(Collectors.toList());
