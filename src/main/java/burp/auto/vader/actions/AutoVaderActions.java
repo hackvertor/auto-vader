@@ -290,7 +290,7 @@ public class AutoVaderActions {
         });
     }
 
-    private DOMInvaderConfig.Profile createScanProfile(String canary, ScanType scanType) {
+    public static DOMInvaderConfig.Profile createScanProfile(String canary, ScanType scanType) {
         if (scanType == ScanType.WEB_MESSAGE) {
             return DOMInvaderConfig.customProfile(canary)
                     .setEnabled(true)

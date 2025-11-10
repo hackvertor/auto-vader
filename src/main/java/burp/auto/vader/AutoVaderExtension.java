@@ -33,11 +33,11 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
     public static String chromiumPath;
     public static DOMInvaderConfig sharedConfig;
     private AutoVaderActions actions;
-    private IssueDeduplicator deduper;
+    public static IssueDeduplicator deduper;
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
-        api.logging().logToOutput(extensionName + " v1.0.4");
+        api.logging().logToOutput(extensionName + " v1.0.5");
         AutoVaderExtension.api = api;
         String canary = api.persistence().extensionData().getString("canary");
         if(canary == null) {
