@@ -37,7 +37,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
-        api.logging().logToOutput(extensionName + " v1.0.1");
+        api.logging().logToOutput(extensionName + " v1.0.2");
         AutoVaderExtension.api = api;
         String canary = api.persistence().extensionData().getString("canary");
         if(canary == null) {
@@ -65,6 +65,8 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         Path to DOM Invader - If the autodetection fails you can specify a custom path
                         Path to Burp Chromium - If the autodetection fails you can specify a custom path to the executable
                         Payload - The payload to send along with the canary when scanning query parameters
+                        HTML tags to scan - You can scan specific tags for gadgets. Used in conjunction with attributes
+                        Attributes to scan - Scans specific attributes for gadgets.
                         Delay - The amount of delay between requests in ms
                         Always open devtools - Each time the browser window is open the devtools panel will be shown
                         Remove CSP - CSP can break the callbacks that DOM Invader uses to function
@@ -74,6 +76,8 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         SettingsPanelSetting.stringSetting("Path to DOM Invader", domInvaderPath),
                         SettingsPanelSetting.stringSetting("Path to Burp Chromium", chromiumPath),
                         SettingsPanelSetting.stringSetting("Payload", ""),
+                        SettingsPanelSetting.stringSetting("HTML tags to scan", "div,b,span"),
+                        SettingsPanelSetting.stringSetting("Attributes to scan", "data-src,title"),
                         SettingsPanelSetting.integerSetting("Delay MS", 0),
                         SettingsPanelSetting.booleanSetting("Always open devtools", false),
                         SettingsPanelSetting.booleanSetting("Remove CSP", true)

@@ -58,6 +58,15 @@ public class AutoVaderContextMenu implements ContextMenuItemsProvider {
         });
         menu.add(scanAllQueryParametersMenu);
 
+        JMenuItem scanAllQueryParametersForGadgetsMenu = new JMenuItem("Scan all GET params for gadgets");
+        scanAllQueryParametersForGadgetsMenu.addActionListener(e -> {
+            List<String> urls = AutoVaderActions.extractUrlsFromEvent(event);
+            if (urls != null) {
+                actions.scanAllQueryParametersForGadgets(urls);
+            }
+        });
+        menu.add(scanAllQueryParametersForGadgetsMenu);
+
         // Scan all POST params
         JMenuItem scanAllPostParametersMenu = new JMenuItem("Scan all POST params");
         scanAllPostParametersMenu.addActionListener(e -> {
