@@ -13,6 +13,9 @@ public class AutoVaderHandler implements HttpHandler {
         boolean isFromIntruder = req.toolSource().isFromTool(ToolType.INTRUDER);
         boolean shouldRunFromRepeater = settings.getBoolean("Auto run from Repeater");
         boolean shouldRunFromIntruder = settings.getBoolean("Auto run from Intruder");
+        if(shouldRunFromRepeater && isFromRepeater) {
+
+        }
         return null;
     }
 
