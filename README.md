@@ -28,6 +28,11 @@ AutoVader adds a context menu to Burp Suite with multiple scanning options. Righ
 - Injects canary values into each parameter
 - Detects DOM-based vulnerabilities from URL inputs
 
+**Scan all GET params for gadgets**
+- Automatically enumerates all query parameters
+- Injects canary into HTML tags and attributes defined in the settings
+- Detects DOM-based gadgets from URL inputs
+
 **Scan all POST params**
 - Automatically enumerates all POST parameters
 - Injects canary values into each parameter
