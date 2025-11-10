@@ -71,10 +71,15 @@ AutoVader provides project-specific settings accessible through Burp Suite's Set
 - **Path to DOM Invader**: Allows you to overwrite the DOM Invader path if auto-detection fails.
 - **Path to Burp Chromium**: Allows you to overwrite the Chromium path to the executable if auto-detection fails.
 - **Payload**: Custom payload to append to canary values when scanning
+- **HTML tags to scan**: You can scan specific tags for gadgets. Used in conjunction with attributes
+- **Attributes to scan**: Scans specific attributes for gadgets.
 - **Delay**: Delay between requests
 - **Always open devtools**: Each time the browser window is open the devtools panel will be shown
 - **Remove CSP**: Removes Content-Security-Policy headers to ensure DOM Invader functions correctly (enabled by default)
-
+- **Headless**: Run scans headlessly
+- **Auto run from Repeater**: This runs AutoVader when a Repeater request is sent
+- **Auto run from Intruder**: This runs AutoVader when a Intruder request is sent
+- 
 ### How It Works
 
 1. AutoVader uses Playwright to launch a headless Chromium browser with DOM Invader extension
