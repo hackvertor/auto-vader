@@ -281,10 +281,11 @@ public class AutoVaderActions {
             requestsToScan = requestsToScan.stream().filter(request -> api.scope().isInScope(request.url())).collect(Collectors.toList());
 
             api.logging().logToOutput("Scanning " + requestsToScan.size() + " requests with canary: " + canary);
+            boolean isHeadless = settings.getBoolean("Headless");
             DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
             int delay = settings.getInteger("Delay MS");
             new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderHttpRequests(requestsToScan, domInvaderPath, true, false, true, delay);
+                    .renderHttpRequests(requestsToScan, domInvaderPath, true, isHeadless, true, delay);
             api.logging().logToOutput("Completed scanning " + requestsToScan.size() + " requests via AutoVader");
         });
     }
