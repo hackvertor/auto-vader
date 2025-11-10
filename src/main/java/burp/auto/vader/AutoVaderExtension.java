@@ -37,7 +37,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
-        api.logging().logToOutput(extensionName + " v1.0.2");
+        api.logging().logToOutput(extensionName + " v1.0.3");
         AutoVaderExtension.api = api;
         String canary = api.persistence().extensionData().getString("canary");
         if(canary == null) {
@@ -51,6 +51,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
         api.userInterface().registerContextMenuItemsProvider(new AutoVaderContextMenu(deduper));
         api.userInterface().menuBar().registerMenu(AutoVaderMenuBar.generateMenuBar());
         api.extension().registerUnloadingHandler(this);
+        api.http().registerHttpHandler(new AutoVaderHandler());
         AutoVaderExtension.domInvaderPath = Paths.get(
                 System.getProperty("user.home"),
                 ".BurpSuite",
@@ -70,6 +71,9 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         Delay - The amount of delay between requests in ms
                         Always open devtools - Each time the browser window is open the devtools panel will be shown
                         Remove CSP - CSP can break the callbacks that DOM Invader uses to function
+                        Headless - Run scans headlessly
+                        Auto run from Repeater - This runs AutoVader when a Repeater request is sent
+                        Auto run from Intruder - This runs AutoVader when a Intruder request is sent
                         """)
                 .withKeywords("Auto", "Vader", "AutoVader", "AutoVader settings")
                 .withSettings(
@@ -80,7 +84,10 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         SettingsPanelSetting.stringSetting("Attributes to scan", "data-src,title"),
                         SettingsPanelSetting.integerSetting("Delay MS", 0),
                         SettingsPanelSetting.booleanSetting("Always open devtools", false),
-                        SettingsPanelSetting.booleanSetting("Remove CSP", true)
+                        SettingsPanelSetting.booleanSetting("Remove CSP", true),
+                        SettingsPanelSetting.booleanSetting("Headless", false),
+                        SettingsPanelSetting.booleanSetting("Auto run from Repeater", false),
+                        SettingsPanelSetting.booleanSetting("Auto run from Intruder", false)
                 )
                 .build();
         api.userInterface().registerSettingsPanel(settings);

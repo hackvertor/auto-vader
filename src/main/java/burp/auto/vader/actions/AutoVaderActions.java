@@ -243,11 +243,11 @@ public class AutoVaderActions {
                 }
                 return;
             }
-
+            boolean isHeadless = settings.getBoolean("Headless");
             api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
             DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
             new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderUrls(urlsToScan, domInvaderPath, true, false, true, delay);
+                    .renderUrls(urlsToScan, domInvaderPath, true, isHeadless, true, delay);
             api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
         });
     }
