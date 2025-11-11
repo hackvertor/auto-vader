@@ -7,11 +7,7 @@ repositories {
 }
 
 dependencies {
-    val localMontoyaJar = file("libs/montoya-api-2025.11.2.jar")
-    if (localMontoyaJar.exists()) {
-        compileOnly(files(localMontoyaJar))
-    }
-    compileOnly("net.portswigger.burp.extensions:montoya-api:2025.6")
+    compileOnly("net.portswigger.burp.extensions:montoya-api:2025.11")
     implementation("com.microsoft.playwright:playwright:1.55.0")
 }
 
