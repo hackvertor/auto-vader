@@ -33,7 +33,7 @@ public class AutoVaderHandler implements HttpHandler {
                 if (!req.isInScope()) return;
                 String reqStr = req.toString();
                 if(!reqStr.contains("$canary")) return;
-                reqStr = reqStr.replaceAll("[$]canary", canary);
+                reqStr = reqStr.replace("$canary", canary);
                 boolean isHeadless = settings.getBoolean("Headless");
                 DOMInvaderConfig.Profile profile =
                     createScanProfile(canary, AutoVaderActions.ScanType.QUERY_PARAMS);
