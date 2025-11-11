@@ -37,7 +37,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
-        api.logging().logToOutput(extensionName + " v1.0.5");
+        api.logging().logToOutput(extensionName + " v1.0.6");
         AutoVaderExtension.api = api;
         String canary = api.persistence().extensionData().getString("canary");
         if(canary == null) {
