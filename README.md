@@ -77,8 +77,9 @@ AutoVader provides project-specific settings accessible through Burp Suite's Set
 - **Always open devtools**: Each time the browser window is open the devtools panel will be shown
 - **Remove CSP**: Removes Content-Security-Policy headers to ensure DOM Invader functions correctly (enabled by default)
 - **Headless**: Run scans headlessly
-- **Auto run from Repeater**: This runs AutoVader when a Repeater request is sent
-- **Auto run from Intruder**: This runs AutoVader when a Intruder request is sent
+- **Auto run from Repeater**: This runs AutoVader when a Repeater request is sent. Note the request should have the $canary placeholder.
+- **Auto run from Intruder**: This runs AutoVader when a Intruder request is sent. Note the request should have the $canary placeholder.
+- **Auto run from other extensions**: This runs AutoVader when another extension makes a request is sent. Note the request should have the $canary placeholder.
 - 
 ### How It Works
 

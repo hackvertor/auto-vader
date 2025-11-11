@@ -8,7 +8,6 @@ import burp.auto.vader.actions.AutoVaderActions;
 import java.util.List;
 
 import static burp.auto.vader.AutoVaderExtension.*;
-import static burp.auto.vader.AutoVaderExtension.api;
 import static burp.auto.vader.actions.AutoVaderActions.createScanProfile;
 
 public class AutoVaderHandler implements HttpHandler {
@@ -17,15 +16,24 @@ public class AutoVaderHandler implements HttpHandler {
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent req) {
         boolean isFromRepeater = req.toolSource().isFromTool(ToolType.REPEATER);
         boolean isFromIntruder = req.toolSource().isFromTool(ToolType.INTRUDER);
+        boolean isFromExtensions = req.toolSource().isFromTool(ToolType.EXTENSIONS);
         boolean shouldRunFromRepeater = settings.getBoolean("Auto run from Repeater");
         boolean shouldRunFromIntruder = settings.getBoolean("Auto run from Intruder");
-        if(shouldRunFromRepeater && isFromRepeater) {
+        boolean shouldRunFromOtherExtensions = settings.getBoolean("Auto run from other extensions");
+
+        boolean shouldExecute = (shouldRunFromRepeater && isFromRepeater) ||
+                                (shouldRunFromIntruder && isFromIntruder) ||
+                                (shouldRunFromOtherExtensions && isFromExtensions);
+
+        if(shouldExecute) {
             executorService.submit(
               () -> {
                 String domInvaderPath = AutoVaderExtension.domInvaderPath;
                 String canary = projectCanary;
                 if (!req.isInScope()) return;
-                String reqStr = req.toString().replaceAll("[$]canary", canary);
+                String reqStr = req.toString();
+                if(!reqStr.contains("$canary")) return;
+                reqStr = reqStr.replaceAll("[$]canary", canary);
                 boolean isHeadless = settings.getBoolean("Headless");
                 DOMInvaderConfig.Profile profile =
                     createScanProfile(canary, AutoVaderActions.ScanType.QUERY_PARAMS);

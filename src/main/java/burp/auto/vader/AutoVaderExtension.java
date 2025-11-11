@@ -37,7 +37,7 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
     @Override
     public void initialize(MontoyaApi api) {
         api.extension().setName(extensionName);
-        api.logging().logToOutput(extensionName + " v1.0.6");
+        api.logging().logToOutput(extensionName + " v1.0.7");
         AutoVaderExtension.api = api;
         String canary = api.persistence().extensionData().getString("canary");
         if(canary == null) {
@@ -72,8 +72,9 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         Always open devtools - Each time the browser window is open the devtools panel will be shown
                         Remove CSP - CSP can break the callbacks that DOM Invader uses to function
                         Headless - Run scans headlessly
-                        Auto run from Repeater - This runs AutoVader when a Repeater request is sent
-                        Auto run from Intruder - This runs AutoVader when a Intruder request is sent
+                        Auto run from Repeater - This runs AutoVader when a Repeater request is sent containing a $canary placeholder
+                        Auto run from Intruder - This runs AutoVader when a Intruder request is sent containing a $canary placeholder
+                        Auto run from other extensions - This runs AutoVader when another extension makes a request is sent containing a $canary placeholder
                         """)
                 .withKeywords("Auto", "Vader", "AutoVader", "AutoVader settings")
                 .withSettings(
@@ -87,7 +88,8 @@ public class AutoVaderExtension implements BurpExtension, ExtensionUnloadingHand
                         SettingsPanelSetting.booleanSetting("Remove CSP", true),
                         SettingsPanelSetting.booleanSetting("Headless", false),
                         SettingsPanelSetting.booleanSetting("Auto run from Repeater", false),
-                        SettingsPanelSetting.booleanSetting("Auto run from Intruder", false)
+                        SettingsPanelSetting.booleanSetting("Auto run from Intruder", false),
+                        SettingsPanelSetting.booleanSetting("Auto run from other extensions", false)
                 )
                 .build();
         api.userInterface().registerSettingsPanel(settings);
