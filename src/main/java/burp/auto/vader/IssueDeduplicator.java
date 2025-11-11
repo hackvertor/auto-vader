@@ -28,7 +28,7 @@ public class IssueDeduplicator {
     }
 
     private String makeKey(AuditIssue issue) {
-        String url = issue.baseUrl();
+        String url = issue.requestResponses().getFirst().request().url();
         String name = issue.name();
         String severity = issue.severity().name();
         return (url + "|" + name + "|" + severity).toLowerCase();

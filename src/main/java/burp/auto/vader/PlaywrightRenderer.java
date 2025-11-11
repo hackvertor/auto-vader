@@ -226,6 +226,7 @@ public class PlaywrightRenderer {
             );
             api.logging().logToOutput("DOM Invader analysis complete for: " + url);
         } catch (Exception e) {
+            if(api == null) return;
             api.logging().logToError("DOM Invader wait failed for: " + url + " - " + e.getMessage());
         }
     }
