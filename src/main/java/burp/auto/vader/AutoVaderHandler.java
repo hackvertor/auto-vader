@@ -123,4 +123,58 @@ public class AutoVaderHandler implements HttpHandler {
             sessionLock.unlock();
         }
     }
+
+    /**
+     * Get or create the singleton browser session.
+     * This allows other components to reuse the same browser session.
+     * @return The browser session or null if creation fails
+     */
+    public static PlaywrightRenderer.BrowserSession getOrCreateBrowserSession() {
+        sessionLock.lock();
+        try {
+            String domInvaderPath = AutoVaderExtension.domInvaderPath;
+            boolean isHeadless = settings.getBoolean("Headless");
+            String canary = projectCanary;
+
+            // Initialize renderer instance if not already created
+            if (rendererInstance == null) {
+                DOMInvaderConfig.Profile profile =
+                    createScanProfile(canary, AutoVaderActions.ScanType.QUERY_PARAMS);
+                rendererInstance = new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false);
+            }
+
+            // Check if browser session is valid, create new one if needed
+            if (browserSession == null || !rendererInstance.isBrowserSessionValid(browserSession)) {
+                // Close old session if it exists but is invalid
+                if (browserSession != null) {
+                    try {
+                        rendererInstance.closeBrowserSession(browserSession);
+                    } catch (Exception e) {
+                        api.logging().logToError("Error closing invalid browser session: " + e.getMessage());
+                    }
+                }
+
+                // Create new browser session
+                try {
+                    api.logging().logToOutput("Creating new browser session for shared use");
+                    browserSession = rendererInstance.createBrowserSession(domInvaderPath, isHeadless, true);
+                } catch (Exception e) {
+                    api.logging().logToError("Failed to create browser session: " + e.getMessage());
+                    return null;
+                }
+            }
+
+            return browserSession;
+        } finally {
+            sessionLock.unlock();
+        }
+    }
+
+    /**
+     * Get the renderer instance
+     * @return The renderer instance or null if not initialized
+     */
+    public static PlaywrightRenderer getRendererInstance() {
+        return rendererInstance;
+    }
 }

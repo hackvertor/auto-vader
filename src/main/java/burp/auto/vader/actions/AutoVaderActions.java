@@ -243,19 +243,51 @@ public class AutoVaderActions {
                 }
                 return;
             }
-            boolean isHeadless = settings.getBoolean("Headless");
+
             api.logging().logToOutput("Scanning " + urlsToScan.size() + " URLs with canary: " + canary);
-            DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
-            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderUrls(urlsToScan, domInvaderPath, true, isHeadless, true, delay);
+
+            // Try to use the singleton browser session from AutoVaderHandler
+            PlaywrightRenderer.BrowserSession session = AutoVaderHandler.getOrCreateBrowserSession();
+            PlaywrightRenderer renderer = AutoVaderHandler.getRendererInstance();
+
+            if (session != null && renderer != null) {
+                // Use the existing singleton browser session
+                api.logging().logToOutput("Using shared browser session for scanning");
+                try {
+                    renderer.renderHttpRequestsWithSession(
+                        urlsToScan.stream()
+                            .map(url -> HttpRequest.httpRequestFromUrl(url))
+                            .collect(Collectors.toList()),
+                        session,
+                        delay
+                    );
+                } catch (Exception e) {
+                    api.logging().logToError("Error using shared browser session: " + e.getMessage());
+                    // Fallback to creating a new browser
+                    fallbackToNewBrowser(urlsToScan, canary, scanType, delay);
+                }
+            } else {
+                // Fallback to creating a new browser if singleton is not available
+                api.logging().logToOutput("Shared browser session not available, creating new browser");
+                fallbackToNewBrowser(urlsToScan, canary, scanType, delay);
+            }
+
             api.logging().logToOutput("Completed scanning " + urlsToScan.size() + " URLs via AutoVader");
         });
     }
 
+    private void fallbackToNewBrowser(List<String> urlsToScan, String canary, ScanType scanType, int delay) {
+        String domInvaderPath = AutoVaderExtension.domInvaderPath;
+        boolean isHeadless = settings.getBoolean("Headless");
+        DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
+        new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
+                .renderUrls(urlsToScan, domInvaderPath, true, isHeadless, true, delay);
+    }
+
     private void executeScanForPosts(List<HttpRequestResponse> requestResponses, PostScanProcessor scanProcessor, ScanType scanType) {
         executorService.submit(() -> {
-            String domInvaderPath = AutoVaderExtension.domInvaderPath;
             String canary = projectCanary;
+            int delay = settings.getInteger("Delay MS");
 
             if (requestResponses == null || requestResponses.isEmpty()) {
                 api.logging().logToOutput("No request responses to scan");
@@ -281,13 +313,37 @@ public class AutoVaderActions {
             requestsToScan = requestsToScan.stream().filter(request -> api.scope().isInScope(request.url())).collect(Collectors.toList());
 
             api.logging().logToOutput("Scanning " + requestsToScan.size() + " requests with canary: " + canary);
-            boolean isHeadless = settings.getBoolean("Headless");
-            DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
-            int delay = settings.getInteger("Delay MS");
-            new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderHttpRequests(requestsToScan, domInvaderPath, true, isHeadless, true, delay);
+
+            // Try to use the singleton browser session from AutoVaderHandler
+            PlaywrightRenderer.BrowserSession session = AutoVaderHandler.getOrCreateBrowserSession();
+            PlaywrightRenderer renderer = AutoVaderHandler.getRendererInstance();
+
+            if (session != null && renderer != null) {
+                // Use the existing singleton browser session
+                api.logging().logToOutput("Using shared browser session for scanning POST requests");
+                try {
+                    renderer.renderHttpRequestsWithSession(requestsToScan, session, delay);
+                } catch (Exception e) {
+                    api.logging().logToError("Error using shared browser session: " + e.getMessage());
+                    // Fallback to creating a new browser
+                    fallbackToNewBrowserForPosts(requestsToScan, canary, scanType, delay);
+                }
+            } else {
+                // Fallback to creating a new browser if singleton is not available
+                api.logging().logToOutput("Shared browser session not available, creating new browser");
+                fallbackToNewBrowserForPosts(requestsToScan, canary, scanType, delay);
+            }
+
             api.logging().logToOutput("Completed scanning " + requestsToScan.size() + " requests via AutoVader");
         });
+    }
+
+    private void fallbackToNewBrowserForPosts(List<HttpRequest> requestsToScan, String canary, ScanType scanType, int delay) {
+        String domInvaderPath = AutoVaderExtension.domInvaderPath;
+        boolean isHeadless = settings.getBoolean("Headless");
+        DOMInvaderConfig.Profile profile = createScanProfile(canary, scanType);
+        new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
+                .renderHttpRequests(requestsToScan, domInvaderPath, true, isHeadless, true, delay);
     }
 
     public static DOMInvaderConfig.Profile createScanProfile(String canary, ScanType scanType) {
