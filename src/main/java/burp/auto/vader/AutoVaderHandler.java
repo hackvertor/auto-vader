@@ -6,11 +6,15 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.auto.vader.actions.AutoVaderActions;
 
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static burp.auto.vader.AutoVaderExtension.*;
 import static burp.auto.vader.actions.AutoVaderActions.createScanProfile;
 
 public class AutoVaderHandler implements HttpHandler {
+    private static PlaywrightRenderer.BrowserSession browserSession;
+    private static PlaywrightRenderer rendererInstance;
+    private static final ReentrantLock sessionLock = new ReentrantLock();
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent req) {
@@ -38,8 +42,45 @@ public class AutoVaderHandler implements HttpHandler {
                 DOMInvaderConfig.Profile profile =
                     createScanProfile(canary, AutoVaderActions.ScanType.QUERY_PARAMS);
                 int delay = settings.getInteger("Delay MS");
-                new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false)
-                    .renderHttpRequests(List.of(HttpRequest.httpRequest(req.httpService(), reqStr)), domInvaderPath, true, isHeadless, true, delay);
+
+                // Use the persistent browser session
+                sessionLock.lock();
+                try {
+                    // Initialize renderer instance if not already created
+                    if (rendererInstance == null) {
+                        rendererInstance = new PlaywrightRenderer(new DOMInvaderConfig(profile), deduper, false);
+                    }
+
+                    // Check if browser session is valid, create new one if needed
+                    if (browserSession == null || !rendererInstance.isBrowserSessionValid(browserSession)) {
+                        // Close old session if it exists but is invalid
+                        if (browserSession != null) {
+                            try {
+                                rendererInstance.closeBrowserSession(browserSession);
+                            } catch (Exception e) {
+                                api.logging().logToError("Error closing invalid browser session: " + e.getMessage());
+                            }
+                        }
+
+                        // Create new browser session
+                        try {
+                            api.logging().logToOutput("Creating new browser session for HttpHandler");
+                            browserSession = rendererInstance.createBrowserSession(domInvaderPath, isHeadless, true);
+                        } catch (Exception e) {
+                            api.logging().logToError("Failed to create browser session: " + e.getMessage());
+                            return;
+                        }
+                    }
+
+                    // Use the existing session to render the request
+                    rendererInstance.renderHttpRequestsWithSession(
+                        List.of(HttpRequest.httpRequest(req.httpService(), reqStr)),
+                        browserSession,
+                        delay
+                    );
+                } finally {
+                    sessionLock.unlock();
+                }
               });
         }
         return null;
@@ -48,5 +89,38 @@ public class AutoVaderHandler implements HttpHandler {
     @Override
     public ResponseReceivedAction handleHttpResponseReceived(HttpResponseReceived resp) {
         return null;
+    }
+
+    /**
+     * Closes the persistent browser session.
+     * This should be called when the extension is being unloaded or when the user wants to close the browser.
+     */
+    public static void closePersistentBrowser() {
+        sessionLock.lock();
+        try {
+            if (browserSession != null && rendererInstance != null) {
+                api.logging().logToOutput("Closing persistent browser session for HttpHandler");
+                rendererInstance.closeBrowserSession(browserSession);
+                browserSession = null;
+            }
+        } catch (Exception e) {
+            api.logging().logToError("Error closing persistent browser: " + e.getMessage());
+        } finally {
+            sessionLock.unlock();
+        }
+    }
+
+    /**
+     * Force reopens the browser session, closing any existing session first.
+     */
+    public static void reopenBrowser() {
+        sessionLock.lock();
+        try {
+            closePersistentBrowser();
+            // The browser will be recreated on the next request
+            api.logging().logToOutput("Browser session closed. A new session will be created on the next request.");
+        } finally {
+            sessionLock.unlock();
+        }
     }
 }

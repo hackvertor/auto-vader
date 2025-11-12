@@ -55,15 +55,17 @@ public class PlaywrightRenderer {
         this.issueDeduplicator = deduper;
     }
 
-    private static class BrowserSession {
+    public static class BrowserSession {
         public final Playwright playwright;
         public final BrowserContext ctx;
         public final Page page;
+        public DOMInvaderIssueReporter issueReporter; // Mutable to allow updating
 
-        public BrowserSession(Playwright playwright, BrowserContext ctx, Page page) {
+        public BrowserSession(Playwright playwright, BrowserContext ctx, Page page, DOMInvaderIssueReporter issueReporter) {
             this.playwright = playwright;
             this.ctx = ctx;
             this.page = page;
+            this.issueReporter = issueReporter;
         }
     }
 
@@ -77,7 +79,7 @@ public class PlaywrightRenderer {
         return Files.exists(path) && Files.isDirectory(path);
     }
 
-    private BrowserSession initializeBrowser(String extensionPath, boolean headless, boolean shouldSendToBurp, DOMInvaderIssueReporter issueReporter) throws Exception {
+    private BrowserSession initializeBrowser(String extensionPath, boolean headless, boolean shouldSendToBurp, DOMInvaderIssueReporter initialReporter) throws Exception {
         String homeDir = System.getProperty("user.home");
         File autoVaderDir = new File(homeDir, ".AutoVader");
         if (!autoVaderDir.exists()) {
@@ -121,6 +123,9 @@ public class PlaywrightRenderer {
         BrowserContext ctx = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
         Page page = ctx.pages().getFirst();
 
+        // Create the browser session early so we can reference it in the binding
+        BrowserSession session = new BrowserSession(playwright, ctx, page, initialReporter);
+
         // Configure extension if present
         String extId = detectAndConfigureExtension(page, extensionPath);
 
@@ -138,9 +143,16 @@ public class PlaywrightRenderer {
             }
         }
 
-        // Set up sendToBurp binding
+        // Set up sendToBurp binding - use reference to session's issueReporter
         ctx.exposeBinding("sendToBurp", (source, arguments) -> {
-            String scannedUrl = issueReporter.getRequest().url();
+            // Use the current issueReporter from the session (can be updated)
+            DOMInvaderIssueReporter currentReporter = session.issueReporter;
+            if (currentReporter == null || currentReporter.getRequest() == null) {
+                api.logging().logToError("No issue reporter or request available");
+                return null;
+            }
+
+            String scannedUrl = currentReporter.getRequest().url();
             String frameUrl = source.frame().url();
             boolean isValidOrigin;
             try {
@@ -160,7 +172,7 @@ public class PlaywrightRenderer {
             String type = arguments[1].toString();
 
             if(shouldSendToBurp) {
-                issueReporter.parseAndReport(json, type, issueReporter.getRequest());
+                currentReporter.parseAndReport(json, type, currentReporter.getRequest());
             }
             return null;
         });
@@ -183,7 +195,7 @@ public class PlaywrightRenderer {
             });
         }
 
-        return new BrowserSession(playwright, ctx, page);
+        return session;
     }
 
     private String detectAndConfigureExtension(Page page, String extensionPath) {
@@ -343,6 +355,117 @@ public class PlaywrightRenderer {
                     session.playwright.close();
                 }
             }
+        }
+    }
+
+    /**
+     * Render HTTP requests using an existing browser session.
+     * This method does not close the browser after completion.
+     */
+    public void renderHttpRequestsWithSession(List<HttpRequest> requests, BrowserSession session, int delay) {
+        if (session == null) {
+            api.logging().logToError("Browser session is null");
+            return;
+        }
+
+        // Create a new issue reporter for this batch of requests
+        DOMInvaderIssueReporter issueReporter = new DOMInvaderIssueReporter(api, issueDeduplicator);
+
+        // Update the session's issue reporter so the binding uses the current one
+        session.issueReporter = issueReporter;
+
+        // Process each HttpRequest
+        for (HttpRequest burpReq : requests) {
+            issueReporter.setRequest(burpReq);
+            try {
+                String url = burpReq.url();
+                if(!url.startsWith("http://") && !url.startsWith("https://")) continue;
+                String method = burpReq.method();
+
+                // Create request options
+                RequestOptions opts = RequestOptions.create().setMethod(method);
+
+                // Set headers from Burp request
+                for (HttpHeader h : burpReq.headers()) {
+                    // Skip content-length as it will be calculated automatically
+                    if (!h.name().equalsIgnoreCase("content-length")) {
+                        opts.setHeader(h.name(), h.value());
+                    }
+                }
+
+                // Set body data if present
+                String body = burpReq.bodyToString();
+                if (body != null && !body.isEmpty()) {
+                    opts.setData(body);
+                }
+
+                // Make the request using context
+                APIResponse response = session.ctx.request().fetch(url, opts);
+                // Navigate to the response URL to render it in the browser
+
+                String stub = response.url();
+                session.page.route(stub, route -> route.fulfill(
+                        new Route.FulfillOptions()
+                                .setStatus(response.status())
+                                .setHeaders(response.headers())
+                                .setBodyBytes(response.body())
+                ));
+                session.page.navigate(stub, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                if(delay > 0) {
+                    Thread.sleep(delay);
+                }
+                session.page.navigate(stub, new Page.NavigateOptions().setWaitUntil(WaitUntilState.NETWORKIDLE));
+                if(delay > 0) {
+                    Thread.sleep(delay);
+                }
+                waitForDomInvader(session.page, url);
+            } catch (Throwable e) {
+                api.logging().logToError("Failed to process request: " + burpReq.url() + " - " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Initialize a browser session that can be reused.
+     * The caller is responsible for closing this session.
+     */
+    public BrowserSession createBrowserSession(String extensionPath, boolean headless, boolean shouldSendToBurp) throws Exception {
+        DOMInvaderIssueReporter issueReporter = new DOMInvaderIssueReporter(api, issueDeduplicator);
+        return initializeBrowser(extensionPath, headless, shouldSendToBurp, issueReporter);
+    }
+
+    /**
+     * Close a browser session.
+     */
+    public void closeBrowserSession(BrowserSession session) {
+        if (session != null) {
+            try {
+                if (session.ctx != null) {
+                    session.ctx.close();
+                }
+                if (session.playwright != null) {
+                    session.playwright.close();
+                }
+            } catch (Exception e) {
+                api.logging().logToError("Error closing browser session: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Check if a browser session is still valid.
+     */
+    public boolean isBrowserSessionValid(BrowserSession session) {
+        if (session == null || session.page == null || session.ctx == null) {
+            return false;
+        }
+
+        try {
+            // Try to evaluate a simple expression to check if the page is responsive
+            session.page.evaluate("1 + 1");
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
