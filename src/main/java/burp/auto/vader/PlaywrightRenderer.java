@@ -44,6 +44,8 @@ public class PlaywrightRenderer {
     private boolean shouldOpenDevtools = false;
     private final DOMInvaderConfig domInvaderConfig;
     private IssueDeduplicator issueDeduplicator;
+    private static Playwright currentPlaywright;
+    private static BrowserContext currentContext;
     public PlaywrightRenderer( IssueDeduplicator dedupe, boolean shouldOpenDevtools) {
         this(new DOMInvaderConfig(), dedupe, shouldOpenDevtools);
     }
@@ -77,7 +79,25 @@ public class PlaywrightRenderer {
         return Files.exists(path) && Files.isDirectory(path);
     }
 
+    private static synchronized void closeExistingBrowser() {
+        if (currentContext != null) {
+            try {
+                currentContext.close();
+            } catch (Exception ignored) {
+            }
+            currentContext = null;
+        }
+        if (currentPlaywright != null) {
+            try {
+                currentPlaywright.close();
+            } catch (Exception ignored) {
+            }
+            currentPlaywright = null;
+        }
+    }
+
     private BrowserSession initializeBrowser(String extensionPath, boolean headless, boolean shouldSendToBurp, DOMInvaderIssueReporter issueReporter) throws Exception {
+        closeExistingBrowser();
         String homeDir = System.getProperty("user.home");
         File autoVaderDir = new File(homeDir, ".AutoVader");
         if (!autoVaderDir.exists()) {
@@ -86,6 +106,7 @@ public class PlaywrightRenderer {
         }
 
         Playwright playwright = Playwright.create();
+        currentPlaywright = playwright;
         BrowserType.LaunchPersistentContextOptions launchOptions = new BrowserType.LaunchPersistentContextOptions();
         String chromiumPath = AutoVaderExtension.chromiumPath.isEmpty() ? settings.getString("Path to Burp Chromium") : AutoVaderExtension.chromiumPath;
         if (fileExists(chromiumPath)) {
@@ -119,6 +140,7 @@ public class PlaywrightRenderer {
         }
 
         BrowserContext ctx = playwright.chromium().launchPersistentContext(Paths.get(userDataDir), launchOptions);
+        currentContext = ctx;
         Page page = ctx.pages().getFirst();
 
         // Configure extension if present
