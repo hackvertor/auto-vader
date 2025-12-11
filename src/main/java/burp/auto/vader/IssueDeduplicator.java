@@ -2,6 +2,8 @@ package burp.auto.vader;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.scanner.audit.issues.AuditIssue;
+import burp.api.montoya.scanner.audit.issues.AuditIssueSeverity;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,7 +30,12 @@ public class IssueDeduplicator {
     }
 
     private String makeKey(AuditIssue issue) {
-        String url = issue.requestResponses().getFirst().request().url();
+        String url;
+        if(!issue.requestResponses().isEmpty() && issue.requestResponses().getFirst().request() != null) {
+            url = issue.requestResponses().getFirst().request().url();
+        } else {
+            url = "";
+        }
         String name = issue.name();
         String severity = issue.severity().name();
         return (url + "|" + name + "|" + severity).toLowerCase();
